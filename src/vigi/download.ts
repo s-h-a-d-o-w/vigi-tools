@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createWriteStream, type WriteStream } from "node:fs";
 import path from "node:path";
 import { finished as streamFinished } from "node:stream/promises";
@@ -95,24 +96,67 @@ export async function downloadMedia(
       : `rtsp://${host}:${port}/multitrans`;
 
   let onFrame: ((channel: number, payload: Buffer) => void) | undefined;
+  let onStreamFinished: (() => void) | undefined;
 
   const client = new RtspClient({
     host,
     port,
     onFrame: (channel, payload) => onFrame?.(channel, payload),
-    onNotification: (body) =>
-      console.warn(`  device notification: ${body.slice(0, 200)}`),
+    onNotification: (body) => {
+      console.warn(`  device notification: ${body.slice(0, 200)}`);
+
+      if (body.includes('"status"') && body.includes('"finished"')) {
+        onStreamFinished?.();
+      }
+    },
   });
 
   await client.connect();
 
   try {
+    // The device only accepts a body once the connection carries an
+    // authenticated session, so the handshake runs on empty requests first.
+    const clientUuid = randomUUID();
+    const challenge = await client.request("MULTITRANS", uri, {
+      "X-Client-UUID": clientUuid,
+    });
+    const challengeHeader = challenge.headers.get("www-authenticate");
+
+    if (challengeHeader === undefined) {
+      throw new Error("Device asked for authentication but sent no challenge");
+    }
+
+    const authorization = buildAuthorization({
+      challenge: parseWwwAuthenticate(challengeHeader),
+      username,
+      password,
+      method: "MULTITRANS",
+      uri,
+    });
+
+    const opened = await client.request("MULTITRANS", uri, {
+      Authorization: authorization,
+      "X-Client-UUID": clientUuid,
+    });
+
+    if (opened.statusCode !== 200) {
+      throw new Error(`MULTITRANS auth failed: ${opened.statusLine}`);
+    }
+
+    const session = (opened.headers.get("session") ?? "").split(";")[0]?.trim();
+
+    if (session === undefined || session === "") {
+      throw new Error("Device did not open a MULTITRANS session");
+    }
+
+    // Verified against a VIGI C440: `method` is the verb and the module name
+    // carries the payload flat. The spec's nested `params` shape is ignored.
     const body = JSON.stringify({
       type: "request",
-      seq: "1",
+      seq: 0,
       params: {
-        method: "download",
-        params: {
+        method: "do",
+        download: {
           client_id: 1,
           start_time: String(entry.startTime),
           end_time: String(entry.endTime),
@@ -123,31 +167,16 @@ export async function downloadMedia(
       },
     });
 
-    let message = await client.request("MULTITRANS", uri, {}, body);
-
-    if (message.statusCode === 401) {
-      const header = message.headers.get("www-authenticate");
-      if (header === undefined) {
-        throw new Error(
-          "Device asked for authentication but sent no challenge",
-        );
-      }
-
-      const authorization = buildAuthorization({
-        challenge: parseWwwAuthenticate(header),
-        username,
-        password,
-        method: "MULTITRANS",
-        uri,
-      });
-
-      message = await client.request(
-        "MULTITRANS",
-        uri,
-        { Authorization: authorization },
-        body,
-      );
-    }
+    const message = await client.request(
+      "MULTITRANS",
+      uri,
+      {
+        Authorization: authorization,
+        "X-Client-UUID": clientUuid,
+        Session: session,
+      },
+      body,
+    );
 
     if (message.statusCode !== 200) {
       throw new Error(`MULTITRANS failed: ${message.statusLine}`);
@@ -191,6 +220,8 @@ export async function downloadMedia(
       idleTimer = setTimeout(() => settle?.(), idleTimeoutMs);
     };
 
+    onStreamFinished = () => settle?.();
+
     const depacketizer = new H264Depacketizer();
 
     onFrame = (channel, payload) => {
@@ -217,6 +248,7 @@ export async function downloadMedia(
 
     clearTimeout(idleTimer);
     onFrame = undefined;
+    onStreamFinished = undefined;
 
     videoStream.end();
     audioStream?.end();

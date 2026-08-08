@@ -52,7 +52,8 @@ function buildArguments(streams: DownloadResult, targetPath: string): string[] {
     );
   }
 
-  args.push("-c:v", "copy", "-movflags", "+faststart", targetPath);
+  // The output carries a `.part` suffix, so ffmpeg cannot infer the container.
+  args.push("-c:v", "copy", "-movflags", "+faststart", "-f", "mp4", targetPath);
 
   return args;
 }

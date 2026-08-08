@@ -35,7 +35,74 @@ Verified working call (the first params request the camera ever answered):
 go2rtc also sends an `X-Client-UUID: <uuid>` header on every request and echoes
 the `Session:` id from the 200 OK. Both are now sent by temp/multitrans-probe.ts.
 
-### Reply taxonomy observed
+## SOLVED: the download request shape
+
+`method` is the **verb**, the **module name** carries the payload **flat**. The
+spec's nested `{"method":"download","params":{…}}` is silently dropped.
+
+```json
+{
+  "type": "request",
+  "seq": 0,
+  "params": {
+    "method": "do",
+    "download": {
+      "client_id": 1,
+      "start_time": "1786196152",
+      "end_time": "1786196170",
+      "file_id": "00010000000000",
+      "event_type": ["MotionDetection"],
+      "media_type": "video"
+    }
+  }
+}
+```
+
+Reply:
+
+```json
+{
+  "error_code": 0,
+  "session_id": "0",
+  "interleaved": [{ "channel": 0, "interleaved_id": "0" }],
+  "av_config": [
+    {
+      "channel": 0,
+      "video_codec": "H264",
+      "audio_codec": "G711alaw",
+      "audio_sampling_rate": "8",
+      "audio_bitwidth": "16",
+      "audio_channels": "1"
+    }
+  ]
+}
+```
+
+`"method":"set"` works identically; `"get"` returns -52405. Note
+`interleaved_id` is `"0"` — a single channel, video only, despite `av_config`
+advertising audio.
+
+During the transfer the device pushes notifications:
+`{"event_type":"stream_sequence","sequence":n}` every 25 frames and
+`{"event_type":"stream_status","status":"finished"}` at the end.
+src/vigi/download.ts settles on the latter instead of waiting for the idle
+timeout.
+
+## Module enumeration (temp/probe-modules.ts)
+
+`{"method":"get","<mod>":{"mode":"x"}}`:
+
+| module                                                                                                | reply    |
+| ----------------------------------------------------------------------------------------------------- | -------- |
+| `talk`                                                                                                | `0`      |
+| `download`, `playback`                                                                                | `-502`   |
+| `video`                                                                                               | `-52402` |
+| `preview`, `stream`, `media`, `audio`, `system`, `record`, `storage`, `sd`, `file`, `search`, `event` | no reply |
+
+The theory held: `-502` = module known, inner shape wrong; silence = unknown
+module.
+
+## Reply taxonomy observed
 
 | params shape                                  | reply             |
 | --------------------------------------------- | ----------------- |
@@ -46,10 +113,6 @@ the `Session:` id from the 200 OK. Both are now sent by temp/multitrans-probe.ts
 | `{"method":"get","system":{…}}`               | no reply          |
 | no `params` key at all                        | `error_code -501` |
 | spec-style `{"method":"download","params":…}` | no reply          |
-
-Working theory: `-502` = module known but the inner structure is wrong;
-**no reply** = module unknown. If that holds, `download` and `playback` both
-exist and only the inner payload shape is still unknown.
 
 ## Ruled out (all tested against the live device)
 
@@ -86,27 +149,23 @@ crashed the RTSP daemon — port 554 then refused all connections until a restar
 Never send a non-object value for `params`.
 The device also closes the connection ~20s after a request it refuses to answer.
 
-## Next steps
+## Status
 
-1. Enumerate modules with temp/probe-modules.ts (`{"method":"get","<mod>":{"mode":"x"}}`)
-   to separate `-502` (known) from silence (unknown). This run was interrupted.
-2. For the modules that answer `-502`, brute the inner shape. Leads worth trying:
-   - `{"method":"get","download":{"name":["capability"]}}` with other section
-     names (`status`, `info`, `config`)
-   - `{"method":"do","download":{"client_id":1,"file_id":…}}` (params flat, not
-     nested under `start`)
-   - mirror the `talk` shape exactly: `{"method":"get","download":{"mode":"…"}}`
-3. Check `bingooo/hass-tplink-ipc` and go2rtc issue #1724 — they likely contain
-   a fuller list of module/section names for this JSON API.
-4. Once `download` answers with `error_code 0`, the reply should carry
-   `interleaved` / `av_config`; src/vigi/download.ts already parses that and the
-   RTP-over-TCP depacketizer is in place.
+End to end works: `getMediaList` -> MULTITRANS `do`/`download` -> interleaved
+RTP over TCP -> H264 elementary stream -> ffmpeg mp4. Verified on a real
+recording (2560x1440 H264, 3.3 MB, decodes cleanly).
+
+ffmpeg needs an explicit `-f mp4` because the temp target ends in `.part`.
+
+Open: audio is advertised in `av_config` but never interleaved, so the mp4 is
+video only.
 
 ## Probe scripts (temp/)
 
 - `multitrans-probe.ts` — reusable MULTITRANS client (auth, session,
   X-Client-UUID, auto reconnect, silent-drop detection). Use this for new probes.
-- `probe-modules.ts` — module enumeration (step 1 above)
+- `probe-download-shape.ts` — the run that cracked the download payload
+- `probe-modules.ts` — module enumeration
 - `probe-go2rtc-style.ts` — the run that cracked the envelope
 - `probe-body-matrix.ts`, `probe-nesting.ts`, `probe-framing.ts`,
   `probe-session-id.ts`, `probe-client-id.ts`, `probe-handshake.ts` — negative
