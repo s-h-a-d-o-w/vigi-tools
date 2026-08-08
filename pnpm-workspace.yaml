@@ -1,5 +1,6 @@
 allowBuilds:
   esbuild: true
+  ffmpeg-static: true
 minimumReleaseAgeExclude:
   - '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260621.1'
   - '@typescript/native-preview-darwin-x64@7.0.0-dev.20260621.1'
@@ -10,5 +11,6 @@ minimumReleaseAgeExclude:
   - '@typescript/native-preview-win32-x64@7.0.0-dev.20260621.1'
   - '@typescript/native-preview@7.0.0-dev.20260621.1'
   - lint-staged@17.0.8
+  - '@s-h-a-d-o-w/oxlint-config@1.2.2'
 onlyBuiltDependencies:
   - esbuild

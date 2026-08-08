@@ -1,0 +1,234 @@
+import { createWriteStream, type WriteStream } from "node:fs";
+import path from "node:path";
+import { finished as streamFinished } from "node:stream/promises";
+
+import type { MediaEntry } from "../types.ts";
+import { sanitizeSegment } from "../media-store.ts";
+import { buildAuthorization, parseWwwAuthenticate } from "./digest.ts";
+import { H264Depacketizer, parseRtpPacket } from "./rtp.ts";
+import { RtspClient } from "./rtsp-client.ts";
+
+type AvConfig = {
+  videoCodec: string;
+  audioCodec: string | undefined;
+  audioSampleRate: number;
+  audioChannels: number;
+};
+
+export type DownloadResult = {
+  videoPath: string;
+  audioPath: string | undefined;
+  av: AvConfig;
+};
+
+export type DownloadOptions = {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  entry: MediaEntry;
+  workDir: string;
+  idleTimeoutMs: number;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function asText(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return typeof value === "number" ? String(value) : undefined;
+}
+
+function parseInterleavedIds(response: Record<string, unknown>): {
+  video: number;
+  audio: number | undefined;
+} {
+  const interleaved = Array.isArray(response["interleaved"])
+    ? (response["interleaved"] as unknown[])
+    : [];
+  const first = asRecord(interleaved[0]);
+  const raw = asText(first?.["interleaved_id"]) ?? "0-1";
+  const parts = raw.split("-").map((part) => Number(part.trim()));
+  const [video, audio] = parts;
+
+  return {
+    video: video !== undefined && Number.isFinite(video) ? video : 0,
+    audio: audio !== undefined && Number.isFinite(audio) ? audio : undefined,
+  };
+}
+
+function parseAvConfig(response: Record<string, unknown>): AvConfig {
+  const configs = Array.isArray(response["av_config"])
+    ? (response["av_config"] as unknown[])
+    : [];
+  const first = asRecord(configs[0]) ?? {};
+  const rawSampleRate = Number(first["audio_sampling_rate"] ?? 8);
+
+  return {
+    videoCodec: asText(first["video_codec"]) ?? "H264",
+    audioCodec: asText(first["audio_codec"]),
+    // The device reports kHz (e.g. "8") while ffmpeg expects Hz.
+    audioSampleRate:
+      rawSampleRate < 1000 ? rawSampleRate * 1000 : rawSampleRate,
+    audioChannels: Number(first["audio_channels"] ?? 1),
+  };
+}
+
+/**
+ * Opens a MULTITRANS session, depacketizes the interleaved RTP stream and writes
+ * the elementary streams into `workDir`.
+ */
+export async function downloadMedia(
+  options: DownloadOptions,
+): Promise<DownloadResult> {
+  const { host, port, username, password, entry, workDir, idleTimeoutMs } =
+    options;
+  const uri =
+    port === 554
+      ? `rtsp://${host}/multitrans`
+      : `rtsp://${host}:${port}/multitrans`;
+
+  let onFrame: ((channel: number, payload: Buffer) => void) | undefined;
+
+  const client = new RtspClient({
+    host,
+    port,
+    onFrame: (channel, payload) => onFrame?.(channel, payload),
+    onNotification: (body) =>
+      console.warn(`  device notification: ${body.slice(0, 200)}`),
+  });
+
+  await client.connect();
+
+  try {
+    const body = JSON.stringify({
+      type: "request",
+      seq: "1",
+      params: {
+        method: "download",
+        params: {
+          client_id: 1,
+          start_time: String(entry.startTime),
+          end_time: String(entry.endTime),
+          file_id: entry.fileId,
+          event_type: [entry.eventType],
+          media_type: "video",
+        },
+      },
+    });
+
+    let message = await client.request("MULTITRANS", uri, {}, body);
+
+    if (message.statusCode === 401) {
+      const header = message.headers.get("www-authenticate");
+      if (header === undefined) {
+        throw new Error(
+          "Device asked for authentication but sent no challenge",
+        );
+      }
+
+      const authorization = buildAuthorization({
+        challenge: parseWwwAuthenticate(header),
+        username,
+        password,
+        method: "MULTITRANS",
+        uri,
+      });
+
+      message = await client.request(
+        "MULTITRANS",
+        uri,
+        { Authorization: authorization },
+        body,
+      );
+    }
+
+    if (message.statusCode !== 200) {
+      throw new Error(`MULTITRANS failed: ${message.statusLine}`);
+    }
+
+    const envelope = asRecord(JSON.parse(message.body)) ?? {};
+    const response = asRecord(envelope["params"]) ?? envelope;
+    const errorCode = Number(response["error_code"] ?? 0);
+
+    if (errorCode !== 0) {
+      throw new Error(`download failed with error_code ${errorCode}`);
+    }
+
+    const av = parseAvConfig(response);
+    if (av.videoCodec.toUpperCase() !== "H264") {
+      throw new Error(
+        `Unsupported video codec ${av.videoCodec}; only H264 is implemented`,
+      );
+    }
+
+    const channels = parseInterleavedIds(response);
+    const baseName = sanitizeSegment(entry.fileId);
+    const videoPath = path.join(workDir, `${baseName}.h264`);
+    const audioPath =
+      av.audioCodec === undefined || channels.audio === undefined
+        ? undefined
+        : path.join(workDir, `${baseName}.audio`);
+
+    const videoStream = createWriteStream(videoPath);
+    const audioStream: WriteStream | undefined =
+      audioPath === undefined ? undefined : createWriteStream(audioPath);
+
+    let settle: (() => void) | undefined;
+    const completed = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+
+    let idleTimer: NodeJS.Timeout | undefined;
+    const restartIdleTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => settle?.(), idleTimeoutMs);
+    };
+
+    const depacketizer = new H264Depacketizer();
+
+    onFrame = (channel, payload) => {
+      restartIdleTimer();
+
+      const packet = parseRtpPacket(payload);
+      if (packet === undefined) {
+        return;
+      }
+
+      if (channel === channels.video) {
+        for (const unit of depacketizer.push(packet.payload)) {
+          videoStream.write(unit);
+        }
+      } else if (channel === channels.audio) {
+        audioStream?.write(packet.payload);
+      }
+    };
+
+    restartIdleTimer();
+    void client.waitForClose().then(() => settle?.());
+
+    await completed;
+
+    clearTimeout(idleTimer);
+    onFrame = undefined;
+
+    videoStream.end();
+    audioStream?.end();
+    await Promise.all([
+      streamFinished(videoStream),
+      audioStream === undefined
+        ? Promise.resolve()
+        : streamFinished(audioStream),
+    ]);
+
+    return { videoPath, audioPath, av };
+  } finally {
+    client.close();
+  }
+}

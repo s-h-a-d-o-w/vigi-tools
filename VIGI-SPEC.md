@@ -418,3 +418,40 @@ If the parameters of the download video are inconsistent with the parameters of 
   }
 }
 ```
+
+# Appendix 1: Error Code Information
+
+## Error code information about OpenAPI interface
+
+| errCode | errMsg                                                                    |
+| ------- | ------------------------------------------------------------------------- |
+| -10000  | Other err                                                                 |
+| -10001  | Json parse failed                                                         |
+| -10002  | Unauthorized Error                                                        |
+| -10003  | Method not support                                                        |
+| -10004  | No method in request                                                      |
+| -10005  | No params in request                                                      |
+| -10006  | Parameter value not exist                                                 |
+| -10007  | Multiple request has no requests                                          |
+| -10008  | Requests in multipleRequest is not an array                               |
+| -10009  | The format error                                                          |
+| -10010  | The parameter error                                                       |
+| -10011  | The number of clients used for playback reached the limit                 |
+| -10012  | Client id is occupied or invalid                                          |
+| -10013  | Storage device does not exist                                             |
+| -10014  | Failed to search for events                                               |
+| -10015  | The request failed, please restart the request                            |
+| -10016  | The motor arrives at the stalled rotor                                    |
+| -10020  | Authentication failed or password error                                   |
+| -10021  | Authentication failed because the number of supported clients is exceeded |
+| -10022  | The number of retries has been exceeded, and it has been locked           |
+| -10030  | Unsupported directives                                                    |
+
+## Error code information about Stream interface
+
+| errCode | errMsg              |
+| ------- | ------------------- |
+| -501    | Json error          |
+| -502    | Json parse error    |
+| -52410  | Json already talk   |
+| -52405  | Session up to limit |
