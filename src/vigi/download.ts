@@ -64,6 +64,26 @@ function parseInterleavedIds(response: Record<string, unknown>): {
   };
 }
 
+/**
+ * The device advertises a single interleaved channel but multiplexes video and
+ * audio onto it, so the RTP payload type is what actually separates them.
+ */
+function audioPayloadType(codec: string | undefined): number | undefined {
+  const normalized = codec?.toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
+
+  if (normalized === undefined) {
+    return undefined;
+  }
+
+  if (normalized.includes("alaw")) {
+    return 8;
+  }
+
+  return normalized.includes("ulaw") || normalized.includes("mulaw")
+    ? 0
+    : undefined;
+}
+
 function parseAvConfig(response: Record<string, unknown>): AvConfig {
   const configs = Array.isArray(response["av_config"])
     ? (response["av_config"] as unknown[])
@@ -103,7 +123,7 @@ export async function downloadMedia(
     port,
     onFrame: (channel, payload) => onFrame?.(channel, payload),
     onNotification: (body) => {
-      console.warn(`  device notification: ${body.slice(0, 200)}`);
+      // console.warn(`  device notification: ${body.slice(0, 200)}`);
 
       if (body.includes('"status"') && body.includes('"finished"')) {
         onStreamFinished?.();
@@ -198,10 +218,11 @@ export async function downloadMedia(
     }
 
     const channels = parseInterleavedIds(response);
+    const audioType = audioPayloadType(av.audioCodec);
     const baseName = sanitizeSegment(entry.fileId);
     const videoPath = path.join(workDir, `${baseName}.h264`);
     const audioPath =
-      av.audioCodec === undefined || channels.audio === undefined
+      audioType === undefined
         ? undefined
         : path.join(workDir, `${baseName}.audio`);
 
@@ -232,12 +253,12 @@ export async function downloadMedia(
         return;
       }
 
-      if (channel === channels.video) {
+      if (packet.payloadType === audioType || channel === channels.audio) {
+        audioStream?.write(packet.payload);
+      } else if (channel === channels.video) {
         for (const unit of depacketizer.push(packet.payload)) {
           videoStream.write(unit);
         }
-      } else if (channel === channels.audio) {
-        audioStream?.write(packet.payload);
       }
     };
 

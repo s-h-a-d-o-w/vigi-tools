@@ -79,14 +79,37 @@ Reply:
 ```
 
 `"method":"set"` works identically; `"get"` returns -52405. Note
-`interleaved_id` is `"0"` — a single channel, video only, despite `av_config`
-advertising audio.
+`interleaved_id` is `"0"` — a single channel. It carries **both** video and
+audio (see below), despite the spec's `"a-b"` video/audio split.
 
 During the transfer the device pushes notifications:
 `{"event_type":"stream_sequence","sequence":n}` every 25 frames and
 `{"event_type":"stream_status","status":"finished"}` at the end.
 src/vigi/download.ts settles on the latter instead of waiting for the idle
 timeout.
+
+## SOLVED: audio is multiplexed onto the video's interleaved channel
+
+The device reports one `interleaved_id` (`"0"`) and pushes both streams over it,
+separated only by the **RTP payload type**:
+
+| channel | payload type | stream            | packets (18 s clip) |
+| ------- | ------------ | ----------------- | ------------------- |
+| 0       | 96           | H264              | 3009                |
+| 0       | 8            | G711 A-law (PCMA) | 140                 |
+
+The old demux routed everything on channel 0 into the H264 depacketizer, which
+dropped the PCMA packets as unknown NAL types — hence "no audio". `src/vigi/download.ts`
+now routes by payload type (derived from `av_config.audio_codec`) and only falls
+back to the interleaved channel id.
+
+No request parameter influences this. Tested and ignored: `audio: ["default"]`
+(go2rtc's live-preview key), `audio: "default"/["enable"]/true`,
+`audio_type: ["default"]`, `channels: [0]`, `interleaved_id: "0-1"` — all return
+`error_code 0` with `interleaved_id "0"`. `media_type` other than the string
+`"video"` (`["video","audio"]`, `"av"`, `"audio"`) returns `-502`.
+
+Result: 18.00 s H264 2560x1440 + 18.00 s AAC 8 kHz mono, no drift.
 
 ## Module enumeration (temp/probe-modules.ts)
 
@@ -152,19 +175,20 @@ The device also closes the connection ~20s after a request it refuses to answer.
 ## Status
 
 End to end works: `getMediaList` -> MULTITRANS `do`/`download` -> interleaved
-RTP over TCP -> H264 elementary stream -> ffmpeg mp4. Verified on a real
-recording (2560x1440 H264, 3.3 MB, decodes cleanly).
+RTP over TCP -> H264 + PCMA elementary streams -> ffmpeg mp4. Verified on a real
+recording (2560x1440 H264 + G711 A-law, decodes cleanly).
 
 ffmpeg needs an explicit `-f mp4` because the temp target ends in `.part`.
-
-Open: audio is advertised in `av_config` but never interleaved, so the mp4 is
-video only.
 
 ## Probe scripts (temp/)
 
 - `multitrans-probe.ts` — reusable MULTITRANS client (auth, session,
   X-Client-UUID, auto reconnect, silent-drop detection). Use this for new probes.
 - `probe-download-shape.ts` — the run that cracked the download payload
+- `probe-audio-request.ts` — sweep for an audio toggle on the download request
+  (negative: no parameter changes the response)
+- `probe-audio-channels.ts` — the run that found audio on channel 0 / payload
+  type 8
 - `probe-modules.ts` — module enumeration
 - `probe-go2rtc-style.ts` — the run that cracked the envelope
 - `probe-body-matrix.ts`, `probe-nesting.ts`, `probe-framing.ts`,
