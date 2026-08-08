@@ -3,7 +3,14 @@ import path from "node:path";
 import process from "node:process";
 
 import { type Config, loadConfig } from "./config.ts";
-import { hasLocalCopy, mediaFileName, mediaFilePath } from "./media-store.ts";
+import {
+  hasLocalCopy,
+  markDownloadFailed,
+  markDownloadFinished,
+  markDownloadStarted,
+  mediaFileName,
+  mediaFilePath,
+} from "./media-store.ts";
 import { muxToMp4 } from "./mux.ts";
 import type { MediaEntry } from "./types.ts";
 import { authenticate, getMediaList } from "./vigi/control-api.ts";
@@ -14,6 +21,8 @@ async function fetchEntry(
   entry: MediaEntry,
   workDir: string,
 ): Promise<void> {
+  await markDownloadStarted(config.downloadDir, entry);
+
   const streams = await downloadMedia({
     host: config.host,
     port: config.rtspPort,
@@ -32,6 +41,8 @@ async function fetchEntry(
       await rm(streams.audioPath, { force: true });
     }
   }
+
+  await markDownloadFinished(config.downloadDir, entry);
 }
 
 async function main(): Promise<void> {
@@ -82,10 +93,11 @@ async function main(): Promise<void> {
       await fetchEntry(config, entry, workDir);
       console.log(`  saved ${name}`);
     } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+
       failures += 1;
-      console.error(
-        `  failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      await markDownloadFailed(config.downloadDir, entry, reason);
+      console.error(`  failed: ${reason}`);
     }
   }
 
