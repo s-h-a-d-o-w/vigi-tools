@@ -1,5 +1,5 @@
 function timestamp(): string {
-  return new Date().toISOString();
+  return new Date().toLocaleString();
 }
 
 export function log(message: string): void {
