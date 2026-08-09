@@ -17,10 +17,20 @@ export function sanitizeSegment(value: string): string {
   return sanitized === "" ? "unnamed" : sanitized;
 }
 
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** Local-time counterpart of `Date.toISOString()`, truncated to seconds. */
+function localTimestamp(date: Date): string {
+  const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+
+  return `${day}T${time}`;
+}
+
 function timestampLabel(secondsSinceEpoch: number): string {
-  return new Date(secondsSinceEpoch * 1000)
-    .toISOString()
-    .slice(0, 19)
+  return localTimestamp(new Date(secondsSinceEpoch * 1000))
     .replaceAll(":", "-")
     .replace("T", "_");
 }
@@ -78,7 +88,7 @@ export async function markDownloadStarted(
 ): Promise<void> {
   await writeMarker(markerFilePath(directory, entry), {
     size: entry.size,
-    started: new Date().toISOString(),
+    started: localTimestamp(new Date()),
   });
 }
 
@@ -89,12 +99,12 @@ export async function markDownloadFinished(
   const markerPath = markerFilePath(directory, entry);
   const marker = readMarker(markerPath) ?? {
     size: entry.size,
-    started: new Date().toISOString(),
+    started: localTimestamp(new Date()),
   };
 
   await writeMarker(markerPath, {
     ...marker,
-    finished: new Date().toISOString(),
+    finished: localTimestamp(new Date()),
   });
 }
 
@@ -106,12 +116,12 @@ export async function markDownloadFailed(
   const markerPath = markerFilePath(directory, entry);
   const marker = readMarker(markerPath) ?? {
     size: entry.size,
-    started: new Date().toISOString(),
+    started: localTimestamp(new Date()),
   };
 
   await writeMarker(markerPath, {
     ...marker,
-    failed: new Date().toISOString(),
+    failed: localTimestamp(new Date()),
     reason,
   });
 }
