@@ -246,6 +246,62 @@ The response is then calculated based on these fields, and a doAuth request with
 }
 ```
 
+## 4.8 Event Detection
+
+### 4.8.1 setMotionDetectionSwitch
+
+**Command:** `setMotionDetectionSwitch`
+
+**Description:** This API is used for setting motion detection switch.
+
+#### Request Parameters
+
+| Parameter             | Type   | Description                                                                                                                                                                                                  |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled`             | String | {"on", "off"}, open/close motion detection switch, default is "on".                                                                                                                                          |
+| `sound_alarm_enabled` | String | {"on", "off"}, open/close the sound alarm switch for motion detection, default is "off".                                                                                                                     |
+| `light_alarm_enabled` | String | {"on", "off"}, open/close the light alarm switch for motion detection, default is "off".                                                                                                                     |
+| `msg_push_enabled`    | String | {"on", "off"}, open/close the msg push switch for motion detection, default is "on".                                                                                                                         |
+| `record_enabled`      | String | {"on", "off"}, open/close the record switch for motion detection, default is "on". But if you want to record, you need to have recordschedule turned on at the same time.                                    |
+| `sensitivity`         | Int    | Range [1,100]. The sensitivity of motion detection, the higher the sensitivity, the easier it is to generate motion detection events.                                                                        |
+| `people_enhance`      | String | {"on", "off"}. Humanoid recognition switch. An event will be triggered only when a specific object enters the area. Determine whether this configuration is supported based on the response result of 4.8.43 |
+| `vehicle_enhance`     | String | {"on", "off"}. Vehicle recognition switch. An event will be triggered only when a specific object enters the area. Determine whether this configuration is supported based on the response result of 4.8.43  |
+| `enhance_validity`    | String | {"high", "medium", "low"}. Confidence levels for people enhancement and vehicle enhancement                                                                                                                  |
+
+#### Response Parameters
+
+| Parameter | Type | Description                   |
+| --------- | ---- | ----------------------------- |
+| (NULL)    | -    | No response body is returned. |
+
+#### Example Request
+
+```json
+{
+  "method": "setMotionDetectionSwitch",
+  "params": {
+    "enabled": "on",
+    "sensitivity": 75,
+    "sound_alarm_enabled": "on",
+    "light_alarm_enabled": "on",
+    "msg_push_enabled": "on",
+    "record_enabled": "on",
+    "people_enhance": "off",
+    "vehicle_enhance": "off",
+    "enhance_validity": "low"
+  }
+}
+```
+
+#### Example Response
+
+```json
+{
+  "method": "setMotionDetectionSwitch",
+  "errCode": 0
+}
+```
+
 ### 4.10.2 searchVideoList
 
 **Command:** `searchVideoList`
