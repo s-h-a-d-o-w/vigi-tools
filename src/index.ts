@@ -97,7 +97,8 @@ for (const entry of missing) {
 
     failures += 1;
     await markDownloadFailed(config.targetDir, entry, reason);
-    logError(`  failed: ${reason}`);
+    logError(`  failure: ${reason}`);
+    logError(`  failed entry: ${JSON.stringify(entry)}`);
   }
 }
 

@@ -246,6 +246,83 @@ The response is then calculated based on these fields, and a doAuth request with
 }
 ```
 
+### 4.10.2 searchVideoList
+
+**Command:** `searchVideoList`
+
+**Description:** Get all the video information in a specific UTC time interval. This is not a pagination interface. For example, search the video event list in 20210301, and the client obtains the first 20 events through start_index = 0, end_index = 19, and then the client obtains the next 20 events until all the events of the channel are obtained. When the number of entries returned by the device side is less than 20, the client thinks that there are no more events on the device side and stops the search.
+
+#### Request Parameters
+
+| Parameter     | Type   | Description                                                                     |
+| ------------- | ------ | ------------------------------------------------------------------------------- |
+| `date`        | String | Query the recording information for the date, the parameter format is yyyymmdd. |
+| `start_index` | Int    | The start index (including) of the query result.                                |
+| `end_index`   | Int    | The end index (including) of the query result.                                  |
+| `user_id`     | Int    | _(Optional)_ User ID (returned by `getUserID` command)                          |
+
+#### Response Parameters
+
+| Parameter    | Type   | Description                                                                                                                                                                                                                                                                                           |
+| ------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `startTime`  | Int    | Video start time, seconds since zero hour on January 1, 1970                                                                                                                                                                                                                                          |
+| `endTime`    | Int    | Video end time, seconds since zero hour on January 1, 1970                                                                                                                                                                                                                                            |
+| `video_type` | String | Video type. Possible values: `Timing`, `MotionDetection`, `TamperDetection`, `CrossLineDetection`, `InvasionDetection`, `AreaEntryDetection`, `AreaLeaveDetection`, `PeopleDetection`, `VehicleDetection`, `DropAndTakeDetection`, `LoiterDetection`, `SceneChangeDetection`, `AudioAnomalyDetection` |
+
+#### Example Request
+
+```json
+{
+  "method": "searchVideoList",
+  "params": {
+    "date": "20220912",
+    "start_index": 0,
+    "end_index": 99
+  }
+}
+```
+
+#### Example Response
+
+```json
+{
+  "method": "searchVideoList",
+  "result": {
+    "search_video_results": [
+      {
+        "search_video_results_1": {
+          "startTime": 1662975800,
+          "endTime": 1662975818,
+          "video_type": "Timing"
+        }
+      },
+      {
+        "search_video_results_2": {
+          "startTime": 1662976759,
+          "endTime": 1662983232,
+          "video_type": "Timing"
+        }
+      },
+      {
+        "search_video_results_3": {
+          "startTime": 1662983232,
+          "endTime": 1662990625,
+          "video_type": "Timing"
+        }
+      },
+      {
+        "search_video_results_4": {
+          "startTime": 1662990625,
+          "endTime": 1662996442,
+          "video_type": "Timing"
+        }
+      }
+    ]
+  },
+  "errCode": 0
+}
+```
+
 ### 4.11.1 getMediaList
 
 **Command:** `getMediaList`
