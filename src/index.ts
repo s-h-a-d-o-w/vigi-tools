@@ -47,7 +47,7 @@ async function fetchEntry(
 }
 
 try {
-  process.loadEnvFile();
+  process.loadEnvFile(path.join(import.meta.dirname, "..", ".env"));
 } catch {
   // No .env file - fall back to the ambient environment.
 }
