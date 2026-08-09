@@ -22,8 +22,6 @@ async function fetchEntry(
   entry: MediaEntry,
   workDir: string,
 ): Promise<void> {
-  await markDownloadStarted(config.targetDir, entry);
-
   const streams = await downloadMedia({
     host: config.host,
     port: config.rtspPort,
@@ -80,6 +78,11 @@ const missing = entries.filter(
 log(
   `${entries.length} recording(s) on the device, ${missing.length} missing from ${config.targetDir}`,
 );
+
+// Claim every entry up front so a concurrent run does not retry them.
+for (const entry of missing) {
+  await markDownloadStarted(config.targetDir, entry);
+}
 
 let failures = 0;
 
