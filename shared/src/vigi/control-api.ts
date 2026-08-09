@@ -148,15 +148,35 @@ export async function authenticate(
   return stok;
 }
 
-/** Turns motion detection on or off. Other motion settings are left untouched. */
+/** Turns motion detection on or off, preserving the device's other motion settings. */
 export async function setMotionDetectionSwitch(
   options: ControlApiOptions,
   stok: string,
   enabled: boolean,
 ): Promise<void> {
-  const result = await post(options, `/stok=${encodeURIComponent(stok)}`, {
+  const path = `/stok=${encodeURIComponent(stok)}`;
+
+  const current = await post(options, path, {
+    method: "getMotionDetectionSwitch",
+  });
+
+  const currentErrorCode = Number(current["errCode"] ?? 0);
+  if (currentErrorCode !== 0) {
+    throw new Error(
+      `getMotionDetectionSwitch failed with errCode ${currentErrorCode}`,
+    );
+  }
+
+  // The device rejects the write with errCode -10009 unless `sensitivity` is
+  // sent alongside `enabled`, so we just echo back everything it just reported.
+  const settings = asRecord(current["result"]);
+  if (settings === undefined) {
+    throw new Error("getMotionDetectionSwitch did not return any settings");
+  }
+
+  const result = await post(options, path, {
     method: "setMotionDetectionSwitch",
-    params: { enabled: enabled ? "on" : "off" },
+    params: { ...settings, enabled: enabled ? "on" : "off" },
   });
 
   const errorCode = Number(result["errCode"] ?? 0);
