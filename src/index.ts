@@ -21,7 +21,7 @@ async function fetchEntry(
   entry: MediaEntry,
   workDir: string,
 ): Promise<void> {
-  await markDownloadStarted(config.downloadDir, entry);
+  await markDownloadStarted(config.targetDir, entry);
 
   const streams = await downloadMedia({
     host: config.host,
@@ -34,7 +34,7 @@ async function fetchEntry(
   });
 
   try {
-    await muxToMp4(streams, mediaFilePath(config.downloadDir, entry));
+    await muxToMp4(streams, mediaFilePath(config.targetDir, entry));
   } finally {
     await rm(streams.videoPath, { force: true });
     if (streams.audioPath !== undefined) {
@@ -42,7 +42,7 @@ async function fetchEntry(
     }
   }
 
-  await markDownloadFinished(config.downloadDir, entry);
+  await markDownloadFinished(config.targetDir, entry);
 }
 
 async function main(): Promise<void> {
@@ -58,9 +58,9 @@ async function main(): Promise<void> {
     port: config.apiPort,
     rejectUnauthorized: config.rejectUnauthorized,
   };
-  const workDir = path.join(config.downloadDir, ".work");
+  const workDir = path.join(config.targetDir, ".work");
 
-  await mkdir(config.downloadDir, { recursive: true });
+  await mkdir(config.targetDir, { recursive: true });
   await rm(workDir, { recursive: true, force: true });
   await mkdir(workDir, { recursive: true });
 
@@ -75,10 +75,10 @@ async function main(): Promise<void> {
   });
 
   const missing = entries.filter(
-    (entry) => !hasLocalCopy(config.downloadDir, entry),
+    (entry) => !hasLocalCopy(config.targetDir, entry),
   );
   console.log(
-    `${entries.length} recording(s) on the device, ${missing.length} missing from ${config.downloadDir}`,
+    `${entries.length} recording(s) on the device, ${missing.length} missing from ${config.targetDir}`,
   );
 
   let failures = 0;
@@ -96,7 +96,7 @@ async function main(): Promise<void> {
       const reason = error instanceof Error ? error.message : String(error);
 
       failures += 1;
-      await markDownloadFailed(config.downloadDir, entry, reason);
+      await markDownloadFailed(config.targetDir, entry, reason);
       console.error(`  failed: ${reason}`);
     }
   }

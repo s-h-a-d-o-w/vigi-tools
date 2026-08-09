@@ -58,10 +58,7 @@ export function loadConfig() {
     password: requiredString("PASSWORD"),
     apiPort: optionalNumber("API_PORT", 20_443),
     rtspPort: optionalNumber("RTSP_PORT", 554),
-    downloadDir: path.resolve(
-      process.cwd(),
-      process.env["DOWNLOAD_DIR"] ?? "temp",
-    ),
+    targetDir: path.resolve(process.cwd(), requiredString("TARGET_DIR")),
     lookbackHours: optionalNumber("LOOKBACK_HOURS", 24),
     eventTypes: optionalEventTypes("EVENT_TYPES"),
     streamIdleTimeoutMs: optionalNumber("STREAM_IDLE_TIMEOUT_MS", 20_000),
