@@ -1,0 +1,14 @@
+{
+  "name": "downloader",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "start": "node .",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "ffmpeg-static": "catalog:"
+  }
+}
