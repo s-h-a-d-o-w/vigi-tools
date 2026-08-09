@@ -455,3 +455,13 @@ If the parameters of the download video are inconsistent with the parameters of 
 | -502    | Json parse error    |
 | -52410  | Json already talk   |
 | -52405  | Session up to limit |
+
+# Appendix 2: Payload Type
+
+PT of RTP, 96-127 is dynamic. There is no universal definition for dynamic PT except that 96 is conventionally used for H264/H265. Therefore, in this document, some dynamic PT types are used as auxiliary data types for events transmission and other functions. The value of the audio part is the same as that of RFC3551. The PT values used in this document are shown in the table below.
+
+| Type value | Type of payload   | Reference format |
+| ---------- | ----------------- | ---------------- |
+| 96         | H.264/H265, Video |                  |
+| 0          | G711U/PCMU, Audio | RFC 3551         |
+| 8          | G711A/PCMA, Audio | RFC 3551         |
