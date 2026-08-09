@@ -1,1 +1,3 @@
-My personal, bare minimum boilerplate for node projects.
+# vigi-downloader
+
+Download videos from a TP-Link VIGI camera using its "OpenAPI".
