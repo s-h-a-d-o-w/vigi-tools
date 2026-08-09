@@ -1,9 +1,12 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import process from "node:process";
+
+import { loadDotEnv } from "shared/env.ts";
+import { log, logError } from "shared/log.ts";
+import type { MediaEntry } from "shared/types.ts";
+import { authenticate, getMediaList } from "shared/vigi/control-api.ts";
 
 import { type Config, loadConfig } from "./config.ts";
-import { log, logError } from "./log.ts";
 import {
   hasLocalCopy,
   markDownloadFailed,
@@ -13,8 +16,6 @@ import {
   mediaFilePath,
 } from "./media-store.ts";
 import { muxToMp4 } from "./mux.ts";
-import type { MediaEntry } from "./types.ts";
-import { authenticate, getMediaList } from "./vigi/control-api.ts";
 import { downloadMedia } from "./vigi/download.ts";
 
 async function fetchEntry(
@@ -44,11 +45,7 @@ async function fetchEntry(
   await markDownloadFinished(config.targetDir, entry);
 }
 
-try {
-  process.loadEnvFile(path.join(import.meta.dirname, "..", ".env"));
-} catch {
-  // No .env file - fall back to the ambient environment.
-}
+loadDotEnv(path.join(import.meta.dirname, ".."));
 
 const config = loadConfig();
 const controlApi = {

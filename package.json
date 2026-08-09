@@ -8,6 +8,7 @@
     "format": "oxfmt",
     "lint": "oxlint",
     "start": "pnpm --filter downloader start",
+    "start:presence": "pnpm --filter presence start",
     "test": "vitest",
     "prepare": "husky",
     "typecheck": "pnpm -r typecheck"

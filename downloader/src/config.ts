@@ -1,34 +1,9 @@
 import path from "node:path";
 import process from "node:process";
 
-import { EVENT_TYPES, type EventType } from "./types.ts";
-
-function requiredString(name: string): string {
-  const value = process.env[name];
-
-  if (value === undefined || value === "") {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
-}
-
-function optionalNumber(name: string, fallback: number): number {
-  const raw = process.env[name];
-
-  if (raw === undefined || raw === "") {
-    return fallback;
-  }
-
-  const value = Number(raw);
-  if (!Number.isFinite(value)) {
-    throw new TypeError(
-      `Environment variable ${name} must be a number but was "${raw}"`,
-    );
-  }
-
-  return value;
-}
+import { loadDeviceConfig } from "shared/config.ts";
+import { optionalNumber, requiredString } from "shared/env.ts";
+import { EVENT_TYPES, type EventType } from "shared/types.ts";
 
 function optionalEventTypes(name: string): EventType[] {
   const raw = process.env[name];
@@ -53,17 +28,11 @@ export type Config = ReturnType<typeof loadConfig>;
 
 export function loadConfig() {
   return {
-    host: requiredString("HOST"),
-    username: process.env["USERNAME"] ?? "admin",
-    password: requiredString("PASSWORD"),
-    apiPort: optionalNumber("API_PORT", 20_443),
+    ...loadDeviceConfig(),
     rtspPort: optionalNumber("RTSP_PORT", 554),
     targetDir: path.resolve(process.cwd(), requiredString("TARGET_DIR")),
     lookbackHours: optionalNumber("LOOKBACK_HOURS", 24),
     eventTypes: optionalEventTypes("EVENT_TYPES"),
     streamIdleTimeoutMs: optionalNumber("STREAM_IDLE_TIMEOUT_MS", 20_000),
-    // Cameras ship with a self-signed certificate, so verification is off unless
-    // the certificate has been replaced with one the host trusts.
-    rejectUnauthorized: process.env["TLS_REJECT_UNAUTHORIZED"] === "true",
   };
 }

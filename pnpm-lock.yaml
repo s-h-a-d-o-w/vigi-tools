@@ -80,6 +80,17 @@ importers:
       ffmpeg-static:
         specifier: 'catalog:'
         version: 5.3.0
+      shared:
+        specifier: workspace:*
+        version: link:../shared
+
+  presence:
+    dependencies:
+      shared:
+        specifier: workspace:*
+        version: link:../shared
+
+  shared: {}
 
 packages:
 

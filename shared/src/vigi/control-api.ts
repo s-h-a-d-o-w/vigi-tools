@@ -15,6 +15,9 @@ export type ControlApiOptions = {
 
 const PAGE_SIZE = 10;
 
+// Without this, an unreachable device leaves a long-running caller hanging forever.
+const REQUEST_TIMEOUT_MS = 15_000;
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -49,6 +52,7 @@ function post(
         method: "POST",
         agent,
         rejectUnauthorized: options.rejectUnauthorized,
+        timeout: REQUEST_TIMEOUT_MS,
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(body),
@@ -84,6 +88,11 @@ function post(
       },
     );
 
+    clientRequest.on("timeout", () => {
+      clientRequest.destroy(
+        new Error(`no response within ${REQUEST_TIMEOUT_MS} ms`),
+      );
+    });
     clientRequest.on("error", (error: Error) => {
       reject(
         new Error(`POST ${path} failed: ${error.message}`, { cause: error }),
@@ -137,6 +146,25 @@ export async function authenticate(
   }
 
   return stok;
+}
+
+/** Turns motion detection on or off. Other motion settings are left untouched. */
+export async function setMotionDetectionSwitch(
+  options: ControlApiOptions,
+  stok: string,
+  enabled: boolean,
+): Promise<void> {
+  const result = await post(options, `/stok=${encodeURIComponent(stok)}`, {
+    method: "setMotionDetectionSwitch",
+    params: { enabled: enabled ? "on" : "off" },
+  });
+
+  const errorCode = Number(result["errCode"] ?? 0);
+  if (errorCode !== 0) {
+    throw new Error(
+      `setMotionDetectionSwitch failed with errCode ${errorCode}`,
+    );
+  }
 }
 
 function toMediaEntries(media: Record<string, unknown>): MediaEntry[] {

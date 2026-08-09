@@ -1,5 +1,7 @@
 packages:
   - downloader
+  - presence
+  - shared
 catalog:
   '@s-h-a-d-o-w/oxlint-config': ^1.2.2
   '@types/node': ^24.13.2

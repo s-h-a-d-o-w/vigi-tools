@@ -3,9 +3,13 @@ import { createWriteStream, type WriteStream } from "node:fs";
 import path from "node:path";
 import { finished as streamFinished } from "node:stream/promises";
 
-import type { MediaEntry } from "../types.ts";
+import type { MediaEntry } from "shared/types.ts";
+import {
+  buildAuthorization,
+  parseWwwAuthenticate,
+} from "shared/vigi/digest.ts";
+
 import { sanitizeSegment } from "../media-store.ts";
-import { buildAuthorization, parseWwwAuthenticate } from "./digest.ts";
 import { H264Depacketizer, parseRtpPacket } from "./rtp.ts";
 import { RtspClient } from "./rtsp-client.ts";
 

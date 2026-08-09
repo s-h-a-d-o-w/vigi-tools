@@ -1,7 +1,8 @@
 {
-  "name": "downloader",
+  "name": "presence",
   "version": "1.0.0",
   "license": "MIT",
+  "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "scripts": {
@@ -9,7 +10,6 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "ffmpeg-static": "catalog:",
     "shared": "workspace:*"
   }
 }
