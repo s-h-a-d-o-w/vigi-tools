@@ -65,7 +65,7 @@ describe("systemd service", () => {
   describe(install, () => {
     it("refuses to run without root", () => {
       expect(() => install("presence")).toThrow(
-        "Run as root, e.g. sudo vigi-tools install presence",
+        "Run as root, e.g. sudo vigi-tools presence install",
       );
       expect(mocks.writeFileSync).not.toHaveBeenCalled();
     });
@@ -75,7 +75,7 @@ describe("systemd service", () => {
       mocks.existsSync.mockReturnValue(false);
 
       expect(() => install("presence")).toThrow(
-        'run "vigi-tools configure presence" here first',
+        'run "vigi-tools presence configure" here first',
       );
       expect(mocks.writeFileSync).not.toHaveBeenCalled();
     });
@@ -142,7 +142,7 @@ describe("systemd service", () => {
   describe(uninstall, () => {
     it("refuses to run without root", () => {
       expect(() => uninstall("presence")).toThrow(
-        "Run as root, e.g. sudo vigi-tools uninstall presence",
+        "Run as root, e.g. sudo vigi-tools presence uninstall",
       );
       expect(mocks.rmSync).not.toHaveBeenCalled();
     });

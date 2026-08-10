@@ -10,16 +10,16 @@ function usage(): string {
     .map(([name, tool]) => `  ${name.padEnd(12)}${tool.description}`)
     .join("\n");
 
-  return `Usage: vigi-tools <tool|command> [tool]
+  return `Usage: vigi-tools <tool> [command]
 
 Tools:
 ${tools}
 
 Commands:
-  <tool>                  run the tool in the foreground
-  configure <tool>        write .env.<tool> in the current directory
-  install <tool>          run the tool as a systemd service (needs sudo)
-  uninstall <tool>        stop and remove that service (needs sudo)`;
+  (none)      run the tool in the foreground
+  configure   write .env.<tool> in the current directory
+  install     run the tool as a systemd service (needs sudo)
+  uninstall   stop and remove that service (needs sudo)`;
 }
 
 async function runTool(tool: ToolName): Promise<void> {
@@ -31,38 +31,30 @@ async function runTool(tool: ToolName): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const [command, argument] = process.argv.slice(2);
+  const [tool, command] = process.argv.slice(2);
 
-  if (command === undefined || command === "--help" || command === "-h") {
+  if (tool === undefined || tool === "--help" || tool === "-h") {
     console.log(usage());
     return;
   }
 
-  if (isToolName(command)) {
-    await runTool(command);
+  if (!isToolName(tool)) {
+    throw new Error(`Unknown tool: ${tool}\n\n${usage()}`);
+  }
+
+  if (command === undefined) {
+    await runTool(tool);
     return;
   }
 
-  if (
-    command !== "configure" &&
-    command !== "install" &&
-    command !== "uninstall"
-  ) {
-    throw new Error(`Unknown tool or command: ${command}\n\n${usage()}`);
-  }
-
-  if (!isToolName(argument)) {
-    throw new Error(
-      `${command} needs a tool: ${Object.keys(TOOLS).join(", ")}`,
-    );
-  }
-
   if (command === "configure") {
-    await configure(argument);
+    await configure(tool);
   } else if (command === "install") {
-    install(argument);
+    install(tool);
+  } else if (command === "uninstall") {
+    uninstall(tool);
   } else {
-    uninstall(argument);
+    throw new Error(`Unknown command: ${command}\n\n${usage()}`);
   }
 }
 

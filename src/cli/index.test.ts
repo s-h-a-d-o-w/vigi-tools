@@ -57,7 +57,7 @@ describe("cli", () => {
 
       await run(...args);
 
-      expect(printed()).toContain("Usage: vigi-tools <tool|command> [tool]");
+      expect(printed()).toContain("Usage: vigi-tools <tool> [command]");
       expect(printed()).toContain("downloader");
       expect(printed()).toContain("presence");
     }
@@ -75,9 +75,9 @@ describe("cli", () => {
   });
 
   it("hands configure, install and uninstall their tool", async () => {
-    await run("configure", "presence");
-    await run("install", "downloader");
-    await run("uninstall", "presence");
+    await run("presence", "configure");
+    await run("downloader", "install");
+    await run("presence", "uninstall");
 
     expect(mocks.configure).toHaveBeenCalledWith("presence");
     expect(mocks.install).toHaveBeenCalledWith("downloader");
@@ -85,11 +85,11 @@ describe("cli", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  it("reports an unknown command with the usage and fails", async () => {
-    await run("start");
+  it("reports an unknown tool with the usage and fails", async () => {
+    await run("camera");
 
     expect(vi.mocked(console.error).mock.lastCall?.[0]).toContain(
-      "Unknown tool or command: start",
+      "Unknown tool: camera",
     );
     expect(vi.mocked(console.error).mock.lastCall?.[0]).toContain(
       "Usage: vigi-tools",
@@ -97,23 +97,26 @@ describe("cli", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it("fails when a command is missing its tool", async () => {
-    await run("install");
+  it("reports an unknown command with the usage and fails", async () => {
+    await run("presence", "start");
 
-    expect(console.error).toHaveBeenCalledWith(
-      "install needs a tool: downloader, presence",
+    expect(vi.mocked(console.error).mock.lastCall?.[0]).toContain(
+      "Unknown command: start",
     );
-    expect(mocks.install).not.toHaveBeenCalled();
+    expect(vi.mocked(console.error).mock.lastCall?.[0]).toContain(
+      "Usage: vigi-tools",
+    );
+    expect(mocks.loadEnvFile).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
   });
 
-  it("fails when a command names something that is not a tool", async () => {
-    await run("configure", "camera");
+  it("fails when a command is missing its tool", async () => {
+    await run("install");
 
-    expect(console.error).toHaveBeenCalledWith(
-      "configure needs a tool: downloader, presence",
+    expect(vi.mocked(console.error).mock.lastCall?.[0]).toContain(
+      "Unknown tool: install",
     );
-    expect(mocks.configure).not.toHaveBeenCalled();
+    expect(mocks.install).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
   });
 });

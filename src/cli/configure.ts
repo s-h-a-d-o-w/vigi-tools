@@ -64,12 +64,17 @@ export async function configure(tool: ToolName): Promise<void> {
     }
 
     console.log(
-      `\nConfiguring ${tool}. Press enter to accept the value in brackets.\n`,
+      `\nCreating .env.${tool}.\nPress ENTER to accept default values for optional fields.\n`,
     );
 
-    const sections: string[] = [];
+    const inputs: string[] = [];
+    // Sort required fields first so the user is prompted for them before the optional ones.
+    const fields = TOOLS[tool].envSchema.toSorted(
+      (a, b) =>
+        Number(a.default !== undefined) - Number(b.default !== undefined),
+    );
 
-    for (const field of TOOLS[tool].envSchema) {
+    for (const field of fields) {
       const suffix = field.default === undefined ? "" : ` [${field.default}]`;
       let value = "";
 
@@ -84,11 +89,11 @@ export async function configure(tool: ToolName): Promise<void> {
         console.log("  This one is required.\n");
       }
 
-      sections.push(renderField(field, value === "" ? undefined : value));
+      inputs.push(renderField(field, value === "" ? undefined : value));
       console.log("");
     }
 
-    await writeFile(file, `${sections.join("\n\n")}\n`, { mode: 0o600 });
+    await writeFile(file, `${inputs.join("\n\n")}\n`, { mode: 0o600 });
     await chmod(file, 0o600);
 
     console.log(`Wrote ${file}`);

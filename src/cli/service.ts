@@ -21,7 +21,7 @@ function systemctl(args: string[]): void {
 
 function requireRoot(command: string, tool: ToolName): void {
   if (process.getuid?.() !== 0) {
-    throw new Error(`Run as root, e.g. sudo vigi-tools ${command} ${tool}`);
+    throw new Error(`Run as root, e.g. sudo vigi-tools ${tool} ${command}`);
   }
 }
 
@@ -46,7 +46,7 @@ export function install(tool: ToolName): void {
 
   if (!existsSync(envFile)) {
     throw new Error(
-      `Missing ${envFile} - run "vigi-tools configure ${tool}" here first`,
+      `Missing ${envFile} - run "vigi-tools ${tool} configure" here first`,
     );
   }
 
