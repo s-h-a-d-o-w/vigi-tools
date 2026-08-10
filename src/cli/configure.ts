@@ -12,7 +12,7 @@ import {
   text,
 } from "@clack/prompts";
 
-import type { EnvField } from "#shared/env-schema.ts";
+import type { EnvField } from "../shared/env-schema.ts";
 
 import { envFilePath } from "./env-file.ts";
 import { TOOLS, type ToolName } from "./tools.ts";

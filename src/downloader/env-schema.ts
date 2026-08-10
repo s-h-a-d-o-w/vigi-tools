@@ -1,4 +1,4 @@
-import { deviceEnvSchema, type EnvField } from "#shared/env-schema.ts";
+import { deviceEnvSchema, type EnvField } from "../shared/env-schema.ts";
 
 export const envSchema: EnvField[] = [
   ...deviceEnvSchema,

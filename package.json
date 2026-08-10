@@ -10,17 +10,17 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "node build.ts",
+    "build": "tsc --project tsconfig.build.json",
     "dev": "node ./src/cli/index.ts",
     "format": "oxfmt",
     "lint": "oxlint",
-    "prepublishOnly": "pnpm build",
+    "prepack": "pnpm build",
     "test": "vitest",
     "prepare": "husky",
     "typecheck": "tsc"
   },
   "bin": {
-    "vigi-tools": "dist/cli.mjs"
+    "vigi-tools": "dist/cli/index.js"
   },
   "imports": {
     "#*": "./src/*"
@@ -37,11 +37,12 @@
       "version": "^24.0.0"
     }
   },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0"
+  },
   "devDependencies": {
-    "@clack/prompts": "^1.7.0",
     "@s-h-a-d-o-w/oxlint-config": "^1.2.4",
     "@types/node": "^22.20.1",
-    "esbuild": "^0.27.7",
     "husky": "^9.1.7",
     "knip": "^6.32.0",
     "lint-staged": "^17.0.8",

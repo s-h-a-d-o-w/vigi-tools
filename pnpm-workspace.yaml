@@ -13,5 +13,3 @@ minimumReleaseAgeExclude:
   - lint-staged@17.0.8
   - '@s-h-a-d-o-w/oxlint-config@1.2.2'
   - '@s-h-a-d-o-w/oxlint-config@1.2.4'
-onlyBuiltDependencies:
-  - esbuild

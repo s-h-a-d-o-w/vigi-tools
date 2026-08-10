@@ -1,6 +1,6 @@
-import { envSchema as downloaderEnvSchema } from "#downloader/env-schema.ts";
-import { envSchema as presenceEnvSchema } from "#presence/env-schema.ts";
-import type { EnvField } from "#shared/env-schema.ts";
+import { envSchema as downloaderEnvSchema } from "../downloader/env-schema.ts";
+import { envSchema as presenceEnvSchema } from "../presence/env-schema.ts";
+import type { EnvField } from "../shared/env-schema.ts";
 
 export const TOOLS = {
   downloader: {

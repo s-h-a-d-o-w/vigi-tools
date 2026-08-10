@@ -6,6 +6,8 @@ import type { chmod, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
+import { envSchema } from "../presence/env-schema.ts";
+
 import { configure } from "./configure.ts";
 
 const mocks = vi.hoisted(() => ({
@@ -50,9 +52,12 @@ const ANSWERS: Record<string, string> = {
 /** A bare ENTER, which clack turns into the pre-filled value or an empty string. */
 const ENTER = Symbol("enter");
 
-/** The variable a prompt is asking about. */
+/** The variable a prompt is asking about, which asks with its description. */
 function fieldOf(message: string): string {
-  return message.split(" ")[0] ?? "";
+  return (
+    envSchema.find(({ description }) => message.startsWith(description))
+      ?.name ?? ""
+  );
 }
 
 /**

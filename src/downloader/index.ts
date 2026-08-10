@@ -1,10 +1,10 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { log, logError } from "#shared/log.ts";
-import { runForever } from "#shared/loop.ts";
-import { EVENT_TYPES, type MediaEntry } from "#shared/types.ts";
-import { authenticate, getMediaList } from "#shared/vigi/control-api.ts";
+import { log, logError } from "../shared/log.ts";
+import { runForever } from "../shared/loop.ts";
+import { EVENT_TYPES, type MediaEntry } from "../shared/types.ts";
+import { authenticate, getMediaList } from "../shared/vigi/control-api.ts";
 
 import { type Config, loadConfig } from "./config.ts";
 import {

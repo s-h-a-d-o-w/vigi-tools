@@ -1,5 +1,5 @@
-import { loadDeviceConfig } from "#shared/config.ts";
-import { optionalNumber, requiredList } from "#shared/env.ts";
+import { loadDeviceConfig } from "../shared/config.ts";
+import { optionalNumber, requiredList } from "../shared/env.ts";
 
 export function loadConfig() {
   return {

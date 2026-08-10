@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { MediaEntry } from "#shared/types.ts";
+import type { MediaEntry } from "../shared/types.ts";
 
 /**
  * The device sometimes lists a recording while it is still being written, so a

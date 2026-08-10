@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import process from "node:process";
 
 import { configure } from "./configure.ts";
@@ -25,9 +27,7 @@ Commands:
 async function runTool(tool: ToolName): Promise<void> {
   loadEnvFile(tool);
 
-  // Bundled next to this file. The specifier stays dynamic so that the tools
-  // are not pulled into the CLI bundle.
-  await import(new URL(`${tool}/index.mjs`, import.meta.url).href);
+  await import(new URL(`../${tool}/index.js`, import.meta.url).href);
 }
 
 async function main(): Promise<void> {
