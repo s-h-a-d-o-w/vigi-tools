@@ -1,65 +1,87 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { assert, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PasswordOptions, TextOptions, log } from "@clack/prompts";
 import type { PathLike } from "node:fs";
-import type { chmod, writeFile } from "node:fs/promises";
+import type { chmod, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import type { createInterface, Interface } from "node:readline/promises";
-import type { Writable } from "node:stream";
 
 import { configure } from "./configure.ts";
 
 const mocks = vi.hoisted(() => ({
+  CANCEL: Symbol("clack:cancel"),
   existsSync: vi.fn<(file: PathLike) => boolean>(),
+  readFile: vi.fn<(file: string, encoding: string) => Promise<string>>(),
   writeFile:
     vi.fn<(file: string, data: string, options: object) => Promise<void>>(),
   chmod: vi.fn<(file: string, mode: number) => Promise<void>>(),
-  createInterface: vi.fn<(options: { output: Writable }) => Interface>(),
-  question: vi.fn<(query: string) => Promise<string>>(),
-  close: vi.fn<() => void>(),
+  text: vi.fn<(options: TextOptions) => Promise<string | symbol>>(),
+  password: vi.fn<(options: PasswordOptions) => Promise<string | symbol>>(),
+  cancel: vi.fn<(message?: string) => void>(),
+  warn: vi.fn<(message: string) => void>(),
 }));
 
 vi.mock(import("node:fs"), () => ({ existsSync: mocks.existsSync }));
 vi.mock(import("node:fs/promises"), () => ({
+  readFile: mocks.readFile as unknown as typeof readFile,
   writeFile: mocks.writeFile as unknown as typeof writeFile,
   chmod: mocks.chmod as unknown as typeof chmod,
 }));
-vi.mock(import("node:readline/promises"), () => ({
-  // The real signature carries overloads that configure.ts does not use.
-  createInterface: mocks.createInterface as unknown as typeof createInterface,
+vi.mock(import("@clack/prompts"), () => ({
+  intro: vi.fn<(title?: string) => void>(),
+  outro: vi.fn<(message?: string) => void>(),
+  cancel: mocks.cancel,
+  log: { warn: mocks.warn } as unknown as typeof log,
+  isCancel: (value: unknown): value is symbol => value === mocks.CANCEL,
+  text: mocks.text,
+  password: mocks.password,
 }));
 
 const CWD = "/srv/vigi";
 const FILE = path.join(CWD, ".env.presence");
 
-/** One reply per field of the presence schema, in the order it is walked. */
-const ANSWERS = [
-  "camera.example", // VIGI_HOST
-  "hunter2", // PASSWORD (secret)
-  "", // USERNAME
-  "", // API_PORT
-  "", // TLS_REJECT_UNAUTHORIZED
-  "phone, tablet", // PRESENCE_DEVICES
-  "", // CHECK_INTERVAL_MS
-  "", // PING_TIMEOUT_SECONDS
-];
+/** What is typed into the prompt of a field, keyed by variable name. */
+const ANSWERS: Record<string, string> = {
+  VIGI_HOST: "camera.example",
+  PASSWORD: "hunter2",
+  PRESENCE_DEVICES: "phone, tablet",
+};
 
-/** Everything that reached the terminal. */
-const terminal: string[] = [];
+/** A bare ENTER, which clack turns into the pre-filled value or an empty string. */
+const ENTER = Symbol("enter");
+
+/** The variable a prompt is asking about. */
+function fieldOf(message: string): string {
+  return message.split(" ")[0] ?? "";
+}
 
 /**
- * Answers the prompts in order, falling back to an empty line. Replies are
- * echoed onto the interface's output stream, the way readline echoes typing.
+ * Answers every prompt from `replies`, falling back to `ANSWERS` and to a bare
+ * ENTER for anything that is left.
  */
-function answer(...replies: string[]): void {
-  const queue = [...replies];
+function answer(replies: Record<string, string | symbol> = {}): void {
+  const pick = (message: string): string | symbol | undefined => {
+    const reply = replies[fieldOf(message)] ?? ANSWERS[fieldOf(message)];
 
-  mocks.question.mockImplementation(() => {
-    const reply = queue.shift() ?? "";
-    mocks.createInterface.mock.lastCall?.[0].output.write(`${reply}\n`);
+    return reply === ENTER ? undefined : reply;
+  };
 
-    return Promise.resolve(reply);
-  });
+  mocks.text.mockImplementation(({ message, initialValue }) =>
+    Promise.resolve(pick(message) ?? initialValue ?? ""),
+  );
+  mocks.password.mockImplementation(({ message }) =>
+    Promise.resolve(pick(message) ?? ""),
+  );
+}
+
+/** The options a field was asked with. */
+function optionsOf(
+  prompt: typeof mocks.text | typeof mocks.password,
+  field: string,
+): TextOptions | PasswordOptions | undefined {
+  return prompt.mock.calls
+    .map(([options]) => options)
+    .find(({ message }) => fieldOf(message) === field);
 }
 
 /** What `configure` handed to `writeFile`. */
@@ -70,26 +92,12 @@ function written(): string {
 describe(configure, () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    terminal.length = 0;
     vi.spyOn(process, "cwd").mockReturnValue(CWD);
-    vi.spyOn(console, "log").mockReturnValue(undefined);
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      terminal.push(String(chunk));
-      return true;
-    });
 
     mocks.existsSync.mockReturnValue(false);
     mocks.writeFile.mockResolvedValue(undefined);
     mocks.chmod.mockResolvedValue(undefined);
-    mocks.createInterface.mockReturnValue({
-      question: mocks.question,
-      close: mocks.close,
-    } as unknown as Interface);
-    answer(...ANSWERS);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
+    answer();
   });
 
   it("writes the answers and comments out the accepted defaults", async () => {
@@ -114,64 +122,80 @@ describe(configure, () => {
     expect(mocks.chmod).toHaveBeenCalledWith(FILE, 0o600);
   });
 
-  it("offers the default in the prompt and trims what is typed", async () => {
-    answer(" camera.example ", ...ANSWERS.slice(1));
+  it("offers the default as a placeholder and trims what is typed", async () => {
+    answer({ VIGI_HOST: " camera.example " });
 
     await configure("presence");
 
-    expect(mocks.question).toHaveBeenCalledWith("API_PORT [20443]: ");
+    expect(optionsOf(mocks.text, "API_PORT")).toMatchObject({
+      placeholder: "20443",
+    });
     expect(written()).toContain("VIGI_HOST=camera.example\n");
   });
 
-  it("repeats a required question until it is answered", async () => {
-    answer("", "", ...ANSWERS);
-
+  it("masks secrets instead of asking for them in the clear", async () => {
     await configure("presence");
 
-    const asked = mocks.question.mock.calls.filter(
-      ([query]) => query === "VIGI_HOST: ",
-    );
-    expect(asked).toHaveLength(3);
-    expect(written()).toContain("VIGI_HOST=camera.example\n");
-  });
-
-  it("keeps secrets out of the scrollback", async () => {
-    await configure("presence");
-
-    expect(terminal.join("")).toContain("PASSWORD: ");
-    expect(terminal.join("")).not.toContain("hunter2");
-    expect(terminal.join("")).toContain("camera.example");
+    expect(optionsOf(mocks.password, "PASSWORD")).toMatchObject({ mask: "*" });
+    expect(optionsOf(mocks.text, "PASSWORD")).toBeUndefined();
     expect(written()).toContain("PASSWORD=hunter2");
   });
 
-  it("leaves an existing file alone unless the overwrite is confirmed", async () => {
-    mocks.existsSync.mockReturnValue(true);
-    answer("n");
-
+  it("rejects an empty answer where nothing can fill in", async () => {
     await configure("presence");
 
-    expect(mocks.question).toHaveBeenCalledWith(
-      `${FILE} exists. Overwrite? [y/N] `,
-    );
-    expect(mocks.writeFile).not.toHaveBeenCalled();
-    expect(mocks.close).toHaveBeenCalledWith();
+    const { validate } = optionsOf(mocks.text, "VIGI_HOST") ?? {};
+    assert(typeof validate === "function");
+
+    expect(validate("")).toBe("This one is required.");
+    expect(validate("camera.example")).toBeUndefined();
+    expect(optionsOf(mocks.text, "API_PORT")?.validate).toBeUndefined();
   });
 
-  it("overwrites an existing file once that is confirmed", async () => {
+  it("fills the prompts with the values of an existing file", async () => {
     mocks.existsSync.mockReturnValue(true);
-    answer("Y", ...ANSWERS);
+    mocks.readFile.mockResolvedValue("VIGI_HOST=old.example\nUSERNAME=ops\n");
+    answer({ VIGI_HOST: ENTER, USERNAME: ENTER });
 
     await configure("presence");
 
-    expect(mocks.writeFile).toHaveBeenCalledWith(FILE, expect.any(String), {
-      mode: 0o600,
+    expect(mocks.warn).toHaveBeenCalledWith(expect.stringContaining(FILE));
+    expect(optionsOf(mocks.text, "VIGI_HOST")).toMatchObject({
+      initialValue: "old.example",
     });
+    expect(written()).toContain("VIGI_HOST=old.example\n");
+    expect(written()).toContain("USERNAME=ops\n");
   });
 
-  it("closes the interface when a question fails", async () => {
-    mocks.question.mockRejectedValue(new Error("stdin closed"));
+  it("comments out a pre-filled optional value that is cleared", async () => {
+    mocks.existsSync.mockReturnValue(true);
+    mocks.readFile.mockResolvedValue("USERNAME=ops\n");
+    answer({ USERNAME: "" });
 
-    await expect(configure("presence")).rejects.toThrow("stdin closed");
-    expect(mocks.close).toHaveBeenCalledWith();
+    await configure("presence");
+
+    expect(written()).toContain("# USERNAME=admin");
+  });
+
+  it("keeps the secret on file when its prompt is left empty", async () => {
+    mocks.existsSync.mockReturnValue(true);
+    mocks.readFile.mockResolvedValue("PASSWORD=old-secret\n");
+    answer({ PASSWORD: "" });
+
+    await configure("presence");
+
+    const options = optionsOf(mocks.password, "PASSWORD");
+    expect(options?.message).toContain("keep the current one");
+    expect(options?.validate).toBeUndefined();
+    expect(written()).toContain("PASSWORD=old-secret\n");
+  });
+
+  it("writes nothing when a prompt is cancelled", async () => {
+    answer({ VIGI_HOST: mocks.CANCEL });
+
+    await configure("presence");
+
+    expect(mocks.cancel).toHaveBeenCalledWith("Nothing was written.");
+    expect(mocks.writeFile).not.toHaveBeenCalled();
   });
 });

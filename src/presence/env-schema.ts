@@ -9,12 +9,12 @@ export const envSchema: EnvField[] = [
   },
   {
     name: "CHECK_INTERVAL_MS",
-    description: "How often device presence is checked",
+    description: "How often device presence is checked (ms)",
     default: "60000",
   },
   {
     name: "PING_TIMEOUT_SECONDS",
-    description: "Ping timeout in whole seconds",
+    description: "Ping timeout (seconds)",
     default: "4",
   },
 ];

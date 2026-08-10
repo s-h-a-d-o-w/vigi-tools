@@ -1,8 +1,16 @@
 import { existsSync } from "node:fs";
-import { chmod, writeFile } from "node:fs/promises";
-import process from "node:process";
-import { createInterface } from "node:readline/promises";
-import { Writable } from "node:stream";
+import { chmod, readFile, writeFile } from "node:fs/promises";
+import { parseEnv } from "node:util";
+
+import {
+  cancel,
+  intro,
+  isCancel,
+  log,
+  outro,
+  password,
+  text,
+} from "@clack/prompts";
 
 import type { EnvField } from "#shared/env-schema.ts";
 
@@ -18,87 +26,74 @@ function renderField(field: EnvField, value: string | undefined): string {
   return `# ${field.description}\n${assignment}`;
 }
 
-export async function configure(tool: ToolName): Promise<void> {
-  const file = envFilePath(tool);
-
-  // Secrets are typed into a muted stream so they stay out of the scrollback.
-  let muted = false;
-  const output = new Writable({
-    write(chunk: Buffer, _encoding, callback) {
-      if (!muted) {
-        process.stdout.write(chunk);
-      }
-
-      callback();
-    },
-  });
-  const rl = createInterface({
-    input: process.stdin,
-    output,
-    terminal: true,
-  });
-
-  async function ask(query: string, secret = false): Promise<string> {
-    if (!secret) {
-      return (await rl.question(query)).trim();
-    }
-
-    process.stdout.write(query);
-    muted = true;
-
-    try {
-      return (await rl.question("")).trim();
-    } finally {
-      muted = false;
-      process.stdout.write("\n");
-    }
+/** What a previous run wrote, so the prompts can start from those values. */
+async function readExisting(file: string): Promise<NodeJS.Dict<string>> {
+  if (!existsSync(file)) {
+    return {};
   }
 
-  try {
-    if (
-      existsSync(file) &&
-      (await ask(`${file} exists. Overwrite? [y/N] `)).toLowerCase() !== "y"
-    ) {
-      console.log("Nothing was written.");
+  return parseEnv(await readFile(file, "utf8"));
+}
+
+function required(value: string | undefined): string | undefined {
+  return value === undefined || value.trim() === ""
+    ? "This one is required."
+    : undefined;
+}
+
+export async function configure(tool: ToolName): Promise<void> {
+  const file = envFilePath(tool);
+  const existing = await readExisting(file);
+
+  intro(`Creating .env.${tool}`);
+
+  if (existsSync(file)) {
+    log.warn(
+      `${file} exists. Its values are filled in below and it will be overwritten.`,
+    );
+  }
+
+  // Sort required fields first so the user is prompted for them before the optional ones.
+  const fields = TOOLS[tool].envSchema.toSorted(
+    (a, b) => Number(a.default !== undefined) - Number(b.default !== undefined),
+  );
+  const inputs: string[] = [];
+
+  for (const field of fields) {
+    // A masked prompt cannot be pre-filled, so an empty secret keeps what the file had.
+    const current = existing[field.name];
+    const keepable = field.secret === true ? current : undefined;
+    const optional = field.default !== undefined || keepable !== undefined;
+    const message = field.description;
+
+    const answer = await (field.secret === true
+      ? password({
+          message:
+            keepable === undefined
+              ? message
+              : `${message} (leave empty to keep the current one)`,
+          mask: "*",
+          validate: optional ? undefined : required,
+        })
+      : text({
+          message,
+          initialValue: current,
+          placeholder: field.default,
+          validate: optional ? undefined : required,
+        }));
+
+    if (isCancel(answer)) {
+      cancel("Nothing was written.");
       return;
     }
 
-    console.log(
-      `\nCreating .env.${tool}.\nPress ENTER to accept default values for optional fields.\n`,
-    );
+    const value = answer.trim();
 
-    const inputs: string[] = [];
-    // Sort required fields first so the user is prompted for them before the optional ones.
-    const fields = TOOLS[tool].envSchema.toSorted(
-      (a, b) =>
-        Number(a.default !== undefined) - Number(b.default !== undefined),
-    );
-
-    for (const field of fields) {
-      const suffix = field.default === undefined ? "" : ` [${field.default}]`;
-      let value = "";
-
-      for (;;) {
-        console.log(`# ${field.description}`);
-        value = await ask(`${field.name}${suffix}: `, field.secret === true);
-
-        if (value !== "" || field.default !== undefined) {
-          break;
-        }
-
-        console.log("  This one is required.\n");
-      }
-
-      inputs.push(renderField(field, value === "" ? undefined : value));
-      console.log("");
-    }
-
-    await writeFile(file, `${inputs.join("\n\n")}\n`, { mode: 0o600 });
-    await chmod(file, 0o600);
-
-    console.log(`Wrote ${file}`);
-    console.log(`Start it with: vigi-tools ${tool}`);
-  } finally {
-    rl.close();
+    inputs.push(renderField(field, value === "" ? keepable : value));
   }
+
+  await writeFile(file, `${inputs.join("\n\n")}\n`, { mode: 0o600 });
+  await chmod(file, 0o600);
+
+  outro(`Wrote config. Run with: vigi-tools ${tool}`);
 }

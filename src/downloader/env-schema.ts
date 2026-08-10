@@ -13,12 +13,12 @@ export const envSchema: EnvField[] = [
   },
   {
     name: "CHECK_INTERVAL_MS",
-    description: "How often the camera is checked for new recordings",
+    description: "How often the camera is checked for new recordings (ms)",
     default: "35000",
   },
   {
     name: "CHECK_PREVIOUS_HOURS",
-    description: "How far back each check looks",
+    description: "How far back each check looks (hours)",
     default: "2",
   },
 ];
