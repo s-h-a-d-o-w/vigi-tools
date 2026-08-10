@@ -15,14 +15,16 @@ CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable th
 ## How to use
 
 ```bash
-npx vigi-tools <tool> configure
-npx vigi-tools <tool>
+npm install --global vigi-tools
+# Run where you want to store the config file(s).
+vigi-tools presence configure
+vigi-tools presence
 ```
 
 To run as a service:
 
 ```bash
-sudo npx vigi-tools <tool> install
+sudo vigi-tools presence install
 ```
 
 A service runs as the user who invoked `sudo`, is restarted automatically and
@@ -35,5 +37,5 @@ journalctl -u vigi-<tool> -f
 To stop and remove:
 
 ```bash
-sudo npx vigi-tools <tool> uninstall
+sudo vigi-tools presence uninstall
 ```

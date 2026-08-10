@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
     vi.fn<
       (
         devices: readonly string[],
-        timeoutMs: number,
+        timeoutSeconds: number,
       ) => Promise<string | undefined>
     >(),
   authenticate:
@@ -75,7 +75,7 @@ describe("presence service", () => {
     stubDeviceEnv({
       PRESENCE_DEVICES: "phone, tablet",
       CHECK_INTERVAL_MS: "30000",
-      PING_TIMEOUT_MS: "2500",
+      PING_TIMEOUT_SECONDS: "3",
     });
   });
 
@@ -90,10 +90,7 @@ describe("presence service", () => {
     await check();
 
     expect(mocks.runForever).toHaveBeenCalledWith(30_000, expect.any(Function));
-    expect(mocks.anyDevicePresent).toHaveBeenCalledWith(
-      ["phone", "tablet"],
-      2500,
-    );
+    expect(mocks.anyDevicePresent).toHaveBeenCalledWith(["phone", "tablet"], 3);
   });
 
   it("turns motion detection on when nobody is home", async () => {

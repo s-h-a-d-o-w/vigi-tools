@@ -3,14 +3,15 @@ import { execFile } from "node:child_process";
 // Rejects anything that could be mistaken for a ping option or a shell token.
 const VIGI_HOST_PATTERN = /^[a-z\d][a-z\d.:_-]*$/iu;
 
-function pingHost(host: string, timeoutMs: number): Promise<boolean> {
-  const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1000));
+function pingHost(host: string, timeoutSeconds: number): Promise<boolean> {
+  // ping only understands whole seconds, and waiting less than one is useless.
+  const wait = Math.max(1, Math.ceil(timeoutSeconds));
 
   return new Promise((resolve) => {
     execFile(
       "ping",
-      ["-n", "-c", "1", "-W", String(timeoutSeconds), host],
-      { timeout: timeoutMs + 1000 },
+      ["-n", "-c", "1", "-W", String(wait), host],
+      { timeout: wait * 1000 + 1000 },
       (error) => {
         resolve(error === null);
       },
@@ -21,7 +22,7 @@ function pingHost(host: string, timeoutMs: number): Promise<boolean> {
 /** True as soon as any of the devices answers a ping. */
 export async function anyDevicePresent(
   devices: readonly string[],
-  timeoutMs: number,
+  timeoutSeconds: number,
 ): Promise<string | undefined> {
   for (const device of devices) {
     if (!VIGI_HOST_PATTERN.test(device)) {
@@ -32,7 +33,7 @@ export async function anyDevicePresent(
   const results = await Promise.all(
     devices.map(async (device) => ({
       device,
-      present: await pingHost(device, timeoutMs),
+      present: await pingHost(device, timeoutSeconds),
     })),
   );
 

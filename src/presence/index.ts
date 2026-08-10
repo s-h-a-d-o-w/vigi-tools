@@ -55,7 +55,7 @@ let appliedState: boolean | undefined;
 async function check(): Promise<void> {
   const presentDevice = await anyDevicePresent(
     config.devices,
-    config.pingTimeoutMs,
+    config.pingTimeoutSeconds,
   );
   const shouldDetect = presentDevice === undefined;
 

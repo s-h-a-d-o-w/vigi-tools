@@ -40,7 +40,7 @@ describe(anyDevicePresent, () => {
     respondFor(["tablet", "laptop"]);
 
     await expect(
-      anyDevicePresent(["phone", "tablet", "laptop"], 4000),
+      anyDevicePresent(["phone", "tablet", "laptop"], 4),
     ).resolves.toBe("tablet");
     expect(mocks.execFile).toHaveBeenCalledTimes(3);
   });
@@ -49,14 +49,14 @@ describe(anyDevicePresent, () => {
     respondFor([]);
 
     await expect(
-      anyDevicePresent(["phone", "tablet"], 4000),
+      anyDevicePresent(["phone", "tablet"], 4),
     ).resolves.toBeUndefined();
   });
 
   it("passes the timeout to ping in whole seconds", async () => {
     respondFor([]);
 
-    await anyDevicePresent(["phone"], 4000);
+    await anyDevicePresent(["phone"], 4);
 
     expect(mocks.execFile).toHaveBeenCalledWith(
       "ping",
@@ -69,12 +69,12 @@ describe(anyDevicePresent, () => {
   it("never asks ping to wait less than a second", async () => {
     respondFor([]);
 
-    await anyDevicePresent(["phone"], 200);
+    await anyDevicePresent(["phone"], 0.2);
 
     expect(mocks.execFile).toHaveBeenCalledWith(
       "ping",
       ["-n", "-c", "1", "-W", "1", "phone"],
-      { timeout: 1200 },
+      { timeout: 2000 },
       expect.any(Function),
     );
   });
@@ -84,7 +84,7 @@ describe(anyDevicePresent, () => {
     async (device) => {
       respondFor([]);
 
-      await expect(anyDevicePresent(["phone", device], 4000)).rejects.toThrow(
+      await expect(anyDevicePresent(["phone", device], 4)).rejects.toThrow(
         `"${device}" is not a valid hostname or IP address`,
       );
       expect(mocks.execFile).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ describe(anyDevicePresent, () => {
     respondFor(["192.168.0.10"]);
 
     await expect(
-      anyDevicePresent(["my-phone.local", "192.168.0.10", "fe80::1"], 4000),
+      anyDevicePresent(["my-phone.local", "192.168.0.10", "fe80::1"], 4),
     ).resolves.toBe("192.168.0.10");
   });
 });

@@ -41,7 +41,7 @@ const ANSWERS = [
   "", // TLS_REJECT_UNAUTHORIZED
   "phone, tablet", // PRESENCE_DEVICES
   "", // CHECK_INTERVAL_MS
-  "", // PING_TIMEOUT_MS
+  "", // PING_TIMEOUT_SECONDS
 ];
 
 /** Everything that reached the terminal. */

@@ -13,8 +13,8 @@ export const envSchema: EnvField[] = [
     default: "60000",
   },
   {
-    name: "PING_TIMEOUT_MS",
-    description: "Ping timeout",
-    default: "4000",
+    name: "PING_TIMEOUT_SECONDS",
+    description: "Ping timeout in whole seconds",
+    default: "4",
   },
 ];
