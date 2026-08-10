@@ -20,8 +20,8 @@ ${tools}
 Commands:
   (none)      run the tool in the foreground
   configure   write .env.<tool> in the current directory
-  install     run the tool as a systemd service (needs sudo)
-  uninstall   stop and remove that service (needs sudo)`;
+  install     run the tool as a systemd service (asks for sudo)
+  uninstall   stop and remove that service (asks for sudo)`;
 }
 
 async function runTool(tool: ToolName): Promise<void> {

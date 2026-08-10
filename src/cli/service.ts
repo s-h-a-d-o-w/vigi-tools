@@ -19,13 +19,7 @@ function systemctl(args: string[]): void {
   execFileSync("systemctl", args, { stdio: "inherit" });
 }
 
-function requireRoot(command: string, tool: ToolName): void {
-  if (process.getuid?.() !== 0) {
-    throw new Error(`Run as root, e.g. sudo vigi-tools ${tool} ${command}`);
-  }
-}
-
-/** npx caches are transient, so a service must not be pointed at one. */
+/** The CLI entry next to this module - npx caches are transient, so not those. */
 function cliPath(): string {
   const file = fileURLToPath(import.meta.url);
 
@@ -35,11 +29,43 @@ function cliPath(): string {
     );
   }
 
-  return file;
+  return path.join(path.dirname(file), `index${path.extname(file)}`);
+}
+
+/**
+ * sudo resets PATH, so `sudo vigi-tools ...` usually fails to find the CLI.
+ * Re-running ourselves through absolute paths avoids that. sudo keeps the
+ * working directory, so the tool still picks up the local .env file.
+ */
+function elevate(command: "install" | "uninstall", tool: ToolName): boolean {
+  if (process.getuid?.() === 0) {
+    return false;
+  }
+
+  console.log(`Elevating with sudo: vigi-tools ${tool} ${command}`);
+
+  try {
+    execFileSync("sudo", [process.execPath, cliPath(), tool, command], {
+      stdio: "inherit",
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error("sudo is not available", {
+        cause: error,
+      });
+    }
+
+    // The elevated run reported whatever went wrong itself.
+    process.exitCode = 1;
+  }
+
+  return true;
 }
 
 export function install(tool: ToolName): void {
-  requireRoot("install", tool);
+  if (elevate("install", tool)) {
+    return;
+  }
 
   const exec = cliPath();
   const envFile = envFilePath(tool);
@@ -86,7 +112,9 @@ WantedBy=multi-user.target
 }
 
 export function uninstall(tool: ToolName): void {
-  requireRoot("uninstall", tool);
+  if (elevate("uninstall", tool)) {
+    return;
+  }
 
   try {
     systemctl(["disable", "--now", unitName(tool)]);

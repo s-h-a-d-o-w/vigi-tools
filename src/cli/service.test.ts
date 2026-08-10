@@ -33,8 +33,8 @@ vi.mock(import("node:fs"), () => ({
 
 const UNIT_PATH = "/etc/systemd/system/vigi-presence.service";
 const CWD = "/srv/vigi";
-/** `cliPath` resolves to the module itself, which sits next to this test. */
-const CLI_PATH = fileURLToPath(new URL("service.ts", import.meta.url));
+/** `cliPath` resolves to the CLI entry next to this module. */
+const CLI_PATH = fileURLToPath(new URL("index.ts", import.meta.url));
 
 function becomeRoot(): void {
   vi.spyOn(process, "getuid").mockReturnValue(0);
@@ -60,14 +60,40 @@ describe("systemd service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
+    process.exitCode = 0;
   });
 
   describe(install, () => {
-    it("refuses to run without root", () => {
-      expect(() => install("presence")).toThrow(
-        "Run as root, e.g. sudo vigi-tools presence install",
+    it("re-runs itself through sudo when not root", () => {
+      install("presence");
+
+      expect(mocks.execFileSync).toHaveBeenNthCalledWith(
+        1,
+        "sudo",
+        [process.execPath, CLI_PATH, "presence", "install"],
+        { stdio: "inherit" },
       );
       expect(mocks.writeFileSync).not.toHaveBeenCalled();
+    });
+
+    it("reports a missing sudo", () => {
+      mocks.execFileSync.mockImplementationOnce(() => {
+        throw Object.assign(new Error("spawnSync sudo ENOENT"), {
+          code: "ENOENT",
+        });
+      });
+
+      expect(() => install("presence")).toThrow("sudo is not available");
+    });
+
+    it("fails when the elevated run fails", () => {
+      mocks.execFileSync.mockImplementationOnce(() => {
+        throw new Error("Command failed: sudo");
+      });
+
+      install("presence");
+
+      expect(process.exitCode).toBe(1);
     });
 
     it("asks for a configuration before installing one", () => {
@@ -140,9 +166,14 @@ describe("systemd service", () => {
   });
 
   describe(uninstall, () => {
-    it("refuses to run without root", () => {
-      expect(() => uninstall("presence")).toThrow(
-        "Run as root, e.g. sudo vigi-tools presence uninstall",
+    it("re-runs itself through sudo when not root", () => {
+      uninstall("presence");
+
+      expect(mocks.execFileSync).toHaveBeenNthCalledWith(
+        1,
+        "sudo",
+        [process.execPath, CLI_PATH, "presence", "uninstall"],
+        { stdio: "inherit" },
       );
       expect(mocks.rmSync).not.toHaveBeenCalled();
     });

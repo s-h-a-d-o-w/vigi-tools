@@ -24,10 +24,10 @@ vigi-tools presence
 To run as a service:
 
 ```bash
-sudo vigi-tools presence install
+vigi-tools presence install
 ```
 
-A service runs as the user who invoked `sudo`, is restarted automatically and
+A service runs as the user who invoked it, is restarted automatically and
 starts on boot. Logs go to the journal:
 
 ```bash
@@ -37,5 +37,5 @@ journalctl -u vigi-<tool> -f
 To stop and remove:
 
 ```bash
-sudo vigi-tools presence uninstall
+vigi-tools presence uninstall
 ```
