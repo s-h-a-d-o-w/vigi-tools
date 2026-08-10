@@ -18,6 +18,42 @@ const PAGE_SIZE = 10;
 // Without this, an unreachable device leaves a long-running caller hanging forever.
 const REQUEST_TIMEOUT_MS = 15_000;
 
+// VIGI-SPEC.md, Appendix 1 (OpenAPI and Stream interface error codes).
+const ERROR_MESSAGES = new Map<number, string>([
+  [-10_000, "Unknown error"],
+  [-10_001, "Json parse failed"],
+  [-10_002, "Unauthorized Error"],
+  [-10_003, "Method not supported"],
+  [-10_004, "No method in request"],
+  [-10_005, "No params in request"],
+  [-10_006, "Parameter value not exist"],
+  [-10_007, "Multiple request has no requests"],
+  [-10_008, "Requests in multipleRequest is not an array"],
+  [-10_009, "Payload format error"],
+  [-10_010, "Parameter error"],
+  [-10_011, "The number of clients used for playback reached the limit"],
+  [-10_012, "Client id is occupied or invalid"],
+  [-10_013, "Storage device does not exist"],
+  [-10_014, "Failed to search for events"],
+  [-10_015, "The request failed, please restart the request"],
+  [-10_016, "The motor arrives at the stalled rotor"],
+  [-10_020, "Authentication failed or password error"],
+  [
+    -10_021,
+    "Authentication failed because the number of supported clients is exceeded",
+  ],
+  [-10_022, "The number of retries has been exceeded, and it has been locked"],
+  [-10_030, "Unsupported directives"],
+  [-501, "Json error"],
+  [-502, "Json parse error"],
+  [-52_410, "Json already talking"],
+  [-52_405, "Session up to limit"],
+]);
+
+function describeErrorCode(code: unknown): string {
+  return ERROR_MESSAGES.get(Number(code)) ?? `unknown errCode ${String(code)}`;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -118,7 +154,7 @@ export async function authenticate(
 
   if (fields === undefined) {
     throw new Error(
-      `doAuth did not return a challenge (errCode ${String(challenge["errCode"])})`,
+      `doAuth did not return a challenge: ${describeErrorCode(challenge["errCode"])} (${JSON.stringify(challenge)})`,
     );
   }
 
@@ -141,7 +177,7 @@ export async function authenticate(
 
   if (typeof stok !== "string" || stok === "") {
     throw new Error(
-      `doAuth failed with errCode ${String(result["errCode"])} (${JSON.stringify(result)})`,
+      `doAuth failed: ${describeErrorCode(result["errCode"])} (${JSON.stringify(result)})`,
     );
   }
 
@@ -163,7 +199,7 @@ export async function setMotionDetectionSwitch(
   const currentErrorCode = Number(current["errCode"] ?? 0);
   if (currentErrorCode !== 0) {
     throw new Error(
-      `getMotionDetectionSwitch failed with errCode ${currentErrorCode}`,
+      `getMotionDetectionSwitch failed: ${describeErrorCode(currentErrorCode)} (${JSON.stringify(current)})`,
     );
   }
 
@@ -182,7 +218,7 @@ export async function setMotionDetectionSwitch(
   const errorCode = Number(result["errCode"] ?? 0);
   if (errorCode !== 0) {
     throw new Error(
-      `setMotionDetectionSwitch failed with errCode ${errorCode}`,
+      `setMotionDetectionSwitch failed: ${describeErrorCode(errorCode)} (${JSON.stringify(result)})`,
     );
   }
 }
@@ -231,7 +267,9 @@ export async function getMediaList(
     // spec is wrong, it's actually `errCode` not `error_code`
     const errorCode = Number(result["errCode"] ?? 0);
     if (errorCode !== 0) {
-      throw new Error(`getMediaList failed with errCode ${errorCode}`);
+      throw new Error(
+        `getMediaList failed: ${describeErrorCode(errorCode)} (${JSON.stringify(result)})`,
+      );
     }
 
     // spec is wrong, it's actually `result` not `media`

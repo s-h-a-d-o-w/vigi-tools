@@ -42,7 +42,7 @@ function elevate(command: "install" | "uninstall", tool: ToolName): boolean {
     return false;
   }
 
-  console.log(`Elevating with sudo: vigi-tools ${tool} ${command}`);
+  console.log(`Elevating with sudo...`);
 
   try {
     execFileSync("sudo", [process.execPath, cliPath(), tool, command], {
