@@ -2,9 +2,7 @@ import process from "node:process";
 
 import { optionalNumber, requiredString } from "./env.ts";
 
-export type DeviceConfig = ReturnType<typeof loadDeviceConfig>;
-
-/** The connection settings every tool in this workspace needs. */
+/** The connection settings every tool needs. */
 export function loadDeviceConfig() {
   return {
     host: requiredString("VIGI_HOST"),

@@ -11,7 +11,7 @@ Camera's RTSP parser only accepts **quoted** digest params.
 
 - `algorithm=SHA-256, qop=auth, nc=00000001` (RFC 7616 style) -> 401
 - `algorithm="SHA-256", qop="auth", nc="00000001"` -> 200 OK + `Session: <id>`
-  Fix applied in src/vigi/digest.ts: quote every field.
+  Fix applied in src/shared/vigi/digest.ts: quote every field.
 
 ## SOLVED: the MULTITRANS JSON envelope
 
@@ -85,7 +85,7 @@ audio (see below), despite the spec's `"a-b"` video/audio split.
 During the transfer the device pushes notifications:
 `{"event_type":"stream_sequence","sequence":n}` every 25 frames and
 `{"event_type":"stream_status","status":"finished"}` at the end.
-src/vigi/download.ts settles on the latter instead of waiting for the idle
+src/downloader/vigi/download.ts settles on the latter instead of waiting for the idle
 timeout.
 
 ## SOLVED: audio is multiplexed onto the video's interleaved channel
@@ -99,7 +99,7 @@ separated only by the **RTP payload type**:
 | 0       | 8            | G711 A-law (PCMA) | 140                 |
 
 The old demux routed everything on channel 0 into the H264 depacketizer, which
-dropped the PCMA packets as unknown NAL types — hence "no audio". `src/vigi/download.ts`
+dropped the PCMA packets as unknown NAL types — hence "no audio". `src/downloader/vigi/download.ts`
 now routes by payload type (derived from `av_config.audio_codec`) and only falls
 back to the interleaved channel id.
 

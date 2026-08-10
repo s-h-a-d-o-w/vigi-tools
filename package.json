@@ -16,10 +16,13 @@
     "prepublishOnly": "pnpm build",
     "test": "vitest",
     "prepare": "husky",
-    "typecheck": "tsc && pnpm -r typecheck"
+    "typecheck": "tsc"
   },
   "bin": {
     "vigi-tools": "dist/cli.mjs"
+  },
+  "imports": {
+    "#*": "./src/*"
   },
   "files": [
     "dist"
@@ -34,17 +37,17 @@
     }
   },
   "devDependencies": {
-    "@s-h-a-d-o-w/oxlint-config": "catalog:",
-    "@types/node": "catalog:",
-    "esbuild": "catalog:",
-    "husky": "catalog:",
-    "knip": "catalog:",
-    "lint-staged": "catalog:",
-    "oxfmt": "catalog:",
-    "oxlint": "catalog:",
-    "oxlint-tsgolint": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "@s-h-a-d-o-w/oxlint-config": "^1.2.4",
+    "@types/node": "^22.20.1",
+    "esbuild": "^0.27.7",
+    "husky": "^9.1.7",
+    "knip": "^6.32.0",
+    "lint-staged": "^17.0.8",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.76.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.9"
   },
   "keywords": [
     "vigi",

@@ -4,105 +4,43 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-catalogs:
-  default:
-    '@s-h-a-d-o-w/oxlint-config':
-      specifier: ^1.2.4
-      version: 1.2.4
-    '@types/node':
-      specifier: ^22.20.1
-      version: 22.20.1
-    esbuild:
-      specifier: ^0.27.7
-      version: 0.27.7
-    husky:
-      specifier: ^9.1.7
-      version: 9.1.7
-    knip:
-      specifier: ^6.32.0
-      version: 6.32.0
-    lint-staged:
-      specifier: ^17.0.8
-      version: 17.3.0
-    oxfmt:
-      specifier: ^0.58.0
-      version: 0.58.0
-    oxlint:
-      specifier: ^1.76.0
-      version: 1.77.0
-    oxlint-tsgolint:
-      specifier: ^7.0.2001
-      version: 7.0.2001
-    typescript:
-      specifier: ^7.0.2
-      version: 7.0.2
-    vitest:
-      specifier: ^4.1.9
-      version: 4.1.10
-
 importers:
 
   .:
     devDependencies:
       '@s-h-a-d-o-w/oxlint-config':
-        specifier: 'catalog:'
+        specifier: ^1.2.4
         version: 1.2.4(oxfmt@0.58.0)(oxlint-tsgolint@7.0.2001)(oxlint@1.77.0(oxlint-tsgolint@7.0.2001))
       '@types/node':
-        specifier: 'catalog:'
+        specifier: ^22.20.1
         version: 22.20.1
       esbuild:
-        specifier: 'catalog:'
+        specifier: ^0.27.7
         version: 0.27.7
       husky:
-        specifier: 'catalog:'
+        specifier: ^9.1.7
         version: 9.1.7
       knip:
-        specifier: 'catalog:'
+        specifier: ^6.32.0
         version: 6.32.0
       lint-staged:
-        specifier: 'catalog:'
+        specifier: ^17.0.8
         version: 17.3.0
       oxfmt:
-        specifier: 'catalog:'
+        specifier: ^0.58.0
         version: 0.58.0
       oxlint:
-        specifier: 'catalog:'
+        specifier: ^1.76.0
         version: 1.77.0(oxlint-tsgolint@7.0.2001)
       oxlint-tsgolint:
-        specifier: 'catalog:'
+        specifier: ^7.0.2001
         version: 7.0.2001
       typescript:
-        specifier: 'catalog:'
+        specifier: ^7.0.2
         version: 7.0.2
       vitest:
-        specifier: 'catalog:'
+        specifier: ^4.1.9
         version: 4.1.10(@types/node@22.20.1)(vite@8.2.1(@types/node@22.20.1)(esbuild@0.27.7)(jiti@2.7.0)(yaml@2.9.0))
-
-  cli:
-    dependencies:
-      downloader:
-        specifier: workspace:*
-        version: link:../downloader
-      presence:
-        specifier: workspace:*
-        version: link:../presence
-      shared:
-        specifier: workspace:*
-        version: link:../shared
-
-  downloader:
-    dependencies:
-      shared:
-        specifier: workspace:*
-        version: link:../shared
-
-  presence:
-    dependencies:
-      shared:
-        specifier: workspace:*
-        version: link:../shared
-
-  shared: {}
 
 packages:
 

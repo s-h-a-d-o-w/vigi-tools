@@ -6,6 +6,7 @@ import { build, type BuildOptions } from "esbuild";
 const TOOLS = ["downloader", "presence"];
 
 const root = import.meta.dirname;
+const srcDir = path.join(root, "src");
 const distDir = path.join(root, "dist");
 
 const common: BuildOptions = {
@@ -23,7 +24,7 @@ await mkdir(distDir, { recursive: true });
 for (const tool of TOOLS) {
   await build({
     ...common,
-    entryPoints: [path.join(root, tool, "src", "index.ts")],
+    entryPoints: [path.join(srcDir, tool, "index.ts")],
     outfile: path.join(distDir, tool, "index.mjs"),
   });
 }
@@ -32,7 +33,7 @@ const cli = path.join(distDir, "cli.mjs");
 
 await build({
   ...common,
-  entryPoints: [path.join(root, "cli", "src", "index.ts")],
+  entryPoints: [path.join(srcDir, "cli", "index.ts")],
   outfile: cli,
   banner: { js: "#!/usr/bin/env node" },
 });

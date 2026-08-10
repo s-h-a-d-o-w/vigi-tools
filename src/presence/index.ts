@@ -1,10 +1,10 @@
-import { log } from "shared/log.ts";
-import { runForever } from "shared/loop.ts";
+import { log } from "#shared/log.ts";
+import { runForever } from "#shared/loop.ts";
 import {
   authenticate,
   type ControlApiOptions,
   setMotionDetectionSwitch,
-} from "shared/vigi/control-api.ts";
+} from "#shared/vigi/control-api.ts";
 
 import { loadConfig } from "./config.ts";
 import { anyDevicePresent } from "./ping.ts";

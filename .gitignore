@@ -1,4 +1,5 @@
 .env
+.env.*
 .eslintcache
 dist
 node_modules

@@ -1,8 +1,8 @@
 import path from "node:path";
 import process from "node:process";
 
-import { loadDeviceConfig } from "shared/config.ts";
-import { optionalNumber, requiredString } from "shared/env.ts";
+import { loadDeviceConfig } from "#shared/config.ts";
+import { optionalNumber, requiredString } from "#shared/env.ts";
 
 export type Config = ReturnType<typeof loadConfig>;
 

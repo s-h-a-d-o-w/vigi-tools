@@ -6,8 +6,8 @@ import {
   PASSWORD,
   stubDeviceEnv,
   USERNAME,
-} from "shared/testing.ts";
-import type { ControlApiOptions } from "shared/vigi/control-api.ts";
+} from "#shared/testing.ts";
+import type { ControlApiOptions } from "#shared/vigi/control-api.ts";
 
 const mocks = vi.hoisted(() => ({
   anyDevicePresent:
@@ -42,12 +42,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock(import("./ping.ts"), () => ({
   anyDevicePresent: mocks.anyDevicePresent,
 }));
-vi.mock(import("shared/vigi/control-api.ts"), () => ({
+vi.mock(import("#shared/vigi/control-api.ts"), () => ({
   authenticate: mocks.authenticate,
   setMotionDetectionSwitch: mocks.setMotionDetectionSwitch,
 }));
-vi.mock(import("shared/loop.ts"), () => ({ runForever: mocks.runForever }));
-vi.mock(import("shared/log.ts"), () => ({
+vi.mock(import("#shared/loop.ts"), () => ({ runForever: mocks.runForever }));
+vi.mock(import("#shared/log.ts"), () => ({
   log: mocks.log,
   logError: mocks.logError,
 }));

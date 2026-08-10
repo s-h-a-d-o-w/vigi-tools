@@ -8,9 +8,9 @@ import {
   PASSWORD,
   stubDeviceEnv,
   USERNAME,
-} from "shared/testing.ts";
-import { EVENT_TYPES, type MediaEntry } from "shared/types.ts";
-import type { ControlApiOptions } from "shared/vigi/control-api.ts";
+} from "#shared/testing.ts";
+import { EVENT_TYPES, type MediaEntry } from "#shared/types.ts";
+import type { ControlApiOptions } from "#shared/vigi/control-api.ts";
 
 import type { DownloadOptions, DownloadResult } from "./vigi/download.ts";
 
@@ -71,12 +71,12 @@ vi.mock(import("./mux.ts"), () => ({ muxToMp4: mocks.muxToMp4 }));
 vi.mock(import("./vigi/download.ts"), () => ({
   downloadMedia: mocks.downloadMedia,
 }));
-vi.mock(import("shared/vigi/control-api.ts"), () => ({
+vi.mock(import("#shared/vigi/control-api.ts"), () => ({
   authenticate: mocks.authenticate,
   getMediaList: mocks.getMediaList,
 }));
-vi.mock(import("shared/loop.ts"), () => ({ runForever: mocks.runForever }));
-vi.mock(import("shared/log.ts"), () => ({
+vi.mock(import("#shared/loop.ts"), () => ({ runForever: mocks.runForever }));
+vi.mock(import("#shared/log.ts"), () => ({
   log: mocks.log,
   logError: mocks.logError,
 }));

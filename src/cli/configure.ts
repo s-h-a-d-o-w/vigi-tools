@@ -4,7 +4,7 @@ import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
 
-import type { EnvField } from "shared/env-schema.ts";
+import type { EnvField } from "#shared/env-schema.ts";
 
 import { envFilePath } from "./env-file.ts";
 import { TOOLS, type ToolName } from "./tools.ts";

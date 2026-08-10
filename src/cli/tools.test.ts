@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deviceEnvSchema } from "shared/env-schema.ts";
+import { deviceEnvSchema } from "#shared/env-schema.ts";
 
 import { isToolName, TOOLS } from "./tools.ts";
 
