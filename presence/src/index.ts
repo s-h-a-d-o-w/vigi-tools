@@ -1,7 +1,8 @@
 import path from "node:path";
 
 import { loadDotEnv } from "shared/env.ts";
-import { log, logError } from "shared/log.ts";
+import { log } from "shared/log.ts";
+import { runForever } from "shared/loop.ts";
 import {
   authenticate,
   type ControlApiOptions,
@@ -78,10 +79,4 @@ async function check(): Promise<void> {
   log(`  motion detection turned ${shouldDetect ? "on" : "off"}`);
 }
 
-try {
-  await check();
-} catch (error) {
-  logError(
-    `check failed: ${error instanceof Error ? error.message : String(error)}`,
-  );
-}
+await runForever(config.checkIntervalMs, check);

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { loadDotEnv } from "shared/env.ts";
 import { log, logError } from "shared/log.ts";
+import { runForever } from "shared/loop.ts";
 import type { MediaEntry } from "shared/types.ts";
 import { authenticate, getMediaList } from "shared/vigi/control-api.ts";
 
@@ -55,55 +56,59 @@ const controlApi = {
 };
 const workDir = path.join(config.targetDir, ".work");
 
-await mkdir(config.targetDir, { recursive: true });
-await rm(workDir, { recursive: true, force: true });
-await mkdir(workDir, { recursive: true });
+async function check(): Promise<void> {
+  await mkdir(config.targetDir, { recursive: true });
+  await rm(workDir, { recursive: true, force: true });
+  await mkdir(workDir, { recursive: true });
 
-const stok = await authenticate(controlApi, config.username, config.password);
+  const stok = await authenticate(controlApi, config.username, config.password);
 
-const endTime = Math.floor(Date.now() / 1000); // Seconds since the epoch.
-const startTime = endTime - Math.round(config.lookbackHours * 3600);
-const entries = await getMediaList(controlApi, stok, {
-  startTime,
-  endTime,
-  eventTypes: config.eventTypes,
-});
+  const endTime = Math.floor(Date.now() / 1000); // Seconds since the epoch.
+  const startTime = endTime - Math.round(config.checkPreviousHours * 3600);
+  const entries = await getMediaList(controlApi, stok, {
+    startTime,
+    endTime,
+    eventTypes: config.eventTypes,
+  });
 
-const missing = entries.filter(
-  (entry) => !hasLocalCopy(config.targetDir, entry),
-);
-log(
-  `${entries.length} recording(s) on the device, ${missing.length} missing from ${config.targetDir}`,
-);
-
-// Claim every entry up front so a concurrent run does not retry them.
-for (const entry of missing) {
-  await markDownloadStarted(config.targetDir, entry);
-}
-
-let failures = 0;
-
-for (const entry of missing) {
-  const name = mediaFileName(entry);
+  const missing = entries.filter(
+    (entry) => !hasLocalCopy(config.targetDir, entry),
+  );
   log(
-    `Downloading ${name} (${(entry.size / 1_000_000).toFixed(1)} MB reported)`,
+    `${entries.length} recording(s) on the device, ${missing.length} missing from ${config.targetDir}`,
   );
 
-  try {
-    await fetchEntry(config, entry, workDir);
-    log(`  saved ${name}`);
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
+  // Claim every entry up front so a concurrent run does not retry them.
+  for (const entry of missing) {
+    await markDownloadStarted(config.targetDir, entry);
+  }
 
-    failures += 1;
-    await markDownloadFailed(config.targetDir, entry, reason);
-    logError(`  failure: ${reason}`);
-    logError(`  failed entry: ${JSON.stringify(entry)}`);
+  let failures = 0;
+
+  for (const entry of missing) {
+    const name = mediaFileName(entry);
+    log(
+      `Downloading ${name} (${(entry.size / 1_000_000).toFixed(1)} MB reported)`,
+    );
+
+    try {
+      await fetchEntry(config, entry, workDir);
+      log(`  saved ${name}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+
+      failures += 1;
+      await markDownloadFailed(config.targetDir, entry, reason);
+      logError(`  failure: ${reason}`);
+      logError(`  failed entry: ${JSON.stringify(entry)}`);
+    }
+  }
+
+  await rm(workDir, { recursive: true, force: true });
+
+  if (failures > 0) {
+    throw new Error(`${failures} recording(s) could not be downloaded`);
   }
 }
 
-await rm(workDir, { recursive: true, force: true });
-
-if (failures > 0) {
-  throw new Error(`${failures} recording(s) could not be downloaded`);
-}
+await runForever(config.checkIntervalMs, check);
