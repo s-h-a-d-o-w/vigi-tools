@@ -33,7 +33,7 @@ export const deviceEnvSchema: EnvField[] = [
   {
     name: "TLS_REJECT_UNAUTHORIZED",
     description:
-      "Set to true only if the camera's self-signed certificate was replaced with one this host trusts",
+      "Reject unauthorized TLS certificates? (Requires you to have a valid certificate on the camera, otherwise leave this false.)",
     default: "false",
   },
 ];
