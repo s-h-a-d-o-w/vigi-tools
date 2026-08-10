@@ -1,8 +1,7 @@
 import type { KnipConfig } from "knip";
 
 const config: KnipConfig = {
-  // Provided by the OS, not by a dependency.
-  ignoreBinaries: ["ping"],
+  ignoreBinaries: ["ffmpeg", "ping"],
 };
 
 export default config;

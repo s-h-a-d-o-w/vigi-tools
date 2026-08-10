@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import { rename, rm } from "node:fs/promises";
-import process from "node:process";
 
 import type { DownloadResult } from "./vigi/download.ts";
 
@@ -58,12 +57,11 @@ export async function muxToMp4(
   streams: DownloadResult,
   outputPath: string,
 ): Promise<void> {
-  const ffmpegPath = process.env["FFMPEG_PATH"] ?? "ffmpeg";
   const temporaryPath = `${outputPath}.part`;
   const args = buildArguments(streams, temporaryPath);
 
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(ffmpegPath, args, {
+    const child = spawn("ffmpeg", args, {
       stdio: ["ignore", "ignore", "pipe"] as const,
     });
     let stderr = "";

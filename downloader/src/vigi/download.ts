@@ -33,8 +33,9 @@ export type DownloadOptions = {
   password: string;
   entry: MediaEntry;
   workDir: string;
-  idleTimeoutMs: number;
 };
+
+const IDLE_TIMEOUT = 20_000;
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -112,8 +113,7 @@ function parseAvConfig(response: Record<string, unknown>): AvConfig {
 export async function downloadMedia(
   options: DownloadOptions,
 ): Promise<DownloadResult> {
-  const { host, port, username, password, entry, workDir, idleTimeoutMs } =
-    options;
+  const { host, port, username, password, entry, workDir } = options;
   const uri =
     port === 554
       ? `rtsp://${host}/multitrans`
@@ -242,7 +242,7 @@ export async function downloadMedia(
     let idleTimer: NodeJS.Timeout | undefined;
     const restartIdleTimer = () => {
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => settle?.(), idleTimeoutMs);
+      idleTimer = setTimeout(() => settle?.(), IDLE_TIMEOUT);
     };
 
     onStreamFinished = () => settle?.();

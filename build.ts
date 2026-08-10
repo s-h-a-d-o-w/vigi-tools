@@ -1,53 +1,39 @@
-import { chmod, copyFile, mkdir } from "node:fs/promises";
+import { chmod, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { build } from "esbuild";
+import { build, type BuildOptions } from "esbuild";
 
 const TOOLS = ["downloader", "presence"];
-const TOOL_FILES = ["install.sh", "uninstall.sh", ".env.schema"];
 
 const root = import.meta.dirname;
 const distDir = path.join(root, "dist");
 
-async function copyScript(from: string, to: string): Promise<void> {
-  await copyFile(from, to);
-  await chmod(to, 0o755);
-}
+const common: BuildOptions = {
+  bundle: true,
+  format: "esm",
+  platform: "node",
+  // 32-bit Raspberry Pi OS (armhf) tops out at Node 22.
+  target: "node22",
+};
 
-async function buildTool(tool: string): Promise<void> {
-  const outDir = path.join(distDir, tool);
+await rm(distDir, { recursive: true, force: true });
+await mkdir(distDir, { recursive: true });
 
-  await mkdir(outDir, { recursive: true });
-
-  await build({
-    entryPoints: [path.join(root, tool, "src", "index.ts")],
-    outfile: path.join(outDir, "index.mjs"),
-    bundle: true,
-    format: "esm",
-    platform: "node",
-    // 32-bit Raspberry Pi OS (armhf) tops out at Node 22.
-    target: "node22",
-  });
-
-  for (const file of TOOL_FILES) {
-    const target = path.join(outDir, file);
-
-    if (file.endsWith(".sh")) {
-      await copyScript(path.join(root, tool, file), target);
-    } else {
-      await copyFile(path.join(root, tool, file), target);
-    }
-  }
-}
-
-const sharedDir = path.join(distDir, "shared");
-
-await mkdir(sharedDir, { recursive: true });
-await copyScript(
-  path.join(root, "shared", "systemd.sh"),
-  path.join(sharedDir, "systemd.sh"),
-);
-
+// The CLI loads these at runtime, so each one stays a separate bundle.
 for (const tool of TOOLS) {
-  await buildTool(tool);
+  await build({
+    ...common,
+    entryPoints: [path.join(root, tool, "src", "index.ts")],
+    outfile: path.join(distDir, tool, "index.mjs"),
+  });
 }
+
+const cli = path.join(distDir, "cli.mjs");
+
+await build({
+  ...common,
+  entryPoints: [path.join(root, "cli", "src", "index.ts")],
+  outfile: cli,
+  banner: { js: "#!/usr/bin/env node" },
+});
+await chmod(cli, 0o755);

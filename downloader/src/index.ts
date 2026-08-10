@@ -1,10 +1,9 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { loadDotEnv } from "shared/env.ts";
 import { log, logError } from "shared/log.ts";
 import { runForever } from "shared/loop.ts";
-import type { MediaEntry } from "shared/types.ts";
+import { EVENT_TYPES, type MediaEntry } from "shared/types.ts";
 import { authenticate, getMediaList } from "shared/vigi/control-api.ts";
 
 import { type Config, loadConfig } from "./config.ts";
@@ -31,7 +30,6 @@ async function fetchEntry(
     password: config.password,
     entry,
     workDir,
-    idleTimeoutMs: config.streamIdleTimeoutMs,
   });
 
   try {
@@ -45,8 +43,6 @@ async function fetchEntry(
 
   await markDownloadFinished(config.targetDir, entry);
 }
-
-loadDotEnv(import.meta.dirname);
 
 const config = loadConfig();
 const controlApi = {
@@ -68,7 +64,7 @@ async function check(): Promise<void> {
   const entries = await getMediaList(controlApi, stok, {
     startTime,
     endTime,
-    eventTypes: config.eventTypes,
+    eventTypes: EVENT_TYPES,
   });
 
   const missing = entries.filter(

@@ -1,14 +1,4 @@
-import path from "node:path";
 import process from "node:process";
-
-/** Loads `<dir>/.env`, falling back to the ambient environment when absent. */
-export function loadDotEnv(dir: string): void {
-  try {
-    process.loadEnvFile(path.join(dir, ".env"));
-  } catch {
-    // No .env file - fall back to the ambient environment.
-  }
-}
 
 export function requiredString(name: string): string {
   const value = process.env[name];
