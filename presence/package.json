@@ -4,9 +4,7 @@
   "license": "MIT",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
   "scripts": {
-    "start": "node .",
     "typecheck": "tsc"
   },
   "dependencies": {

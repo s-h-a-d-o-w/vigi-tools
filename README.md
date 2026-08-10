@@ -9,22 +9,40 @@ CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable th
 
 ## Requirements
 
-- Node.js
+The tools are bundled into dependency-free files that target Node 22, so they also
+run on hardware that current dev dependencies don't support - e.g. a 32-bit
+(armhf) Raspberry Pi.
 
-## How to use
+- Build machine: Node.js 24+
+- Target machine: Node.js 22+ and, for the downloader, `ffmpeg` on `PATH`
+  (`sudo apt install ffmpeg`, or point `FFMPEG_PATH` at a binary)
+
+## Build
 
 ```bash
 git clone https://github.com/s-h-a-d-o-w/vigi-tools.git
 cd vigi-tools
 corepack enable
 pnpm i
+pnpm build
 ```
 
-- Create a `.env` file for each tool you want to use; see `.env.schema` files. (Tools run continuously and repeat their check every `CHECK_INTERVAL_MS`.)
-
-### Running as a service
+This produces a self-contained `dist` directory. Copy it to the target machine:
 
 ```bash
+scp -r dist <user>@<host>:~/vigi-tools
+```
+
+## Configure
+
+Create a `.env` next to the `index.mjs` of each tool you want to use; see the
+`.env.schema` file sitting beside it. (Tools run continuously and repeat their
+check every `CHECK_INTERVAL_MS`.)
+
+## Running as a service
+
+```bash
+cd ~/vigi-tools
 sudo ./downloader/install.sh
 sudo ./presence/install.sh
 ```

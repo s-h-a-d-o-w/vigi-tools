@@ -46,7 +46,7 @@ async function fetchEntry(
   await markDownloadFinished(config.targetDir, entry);
 }
 
-loadDotEnv(path.join(import.meta.dirname, ".."));
+loadDotEnv(import.meta.dirname);
 
 const config = loadConfig();
 const controlApi = {

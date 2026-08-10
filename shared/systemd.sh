@@ -24,7 +24,7 @@ if [[ "$ACTION" == "uninstall" ]]; then
 fi
 
 if [[ ! -f "$TOOL_DIR/.env" ]]; then
-  echo "Missing $TOOL_DIR/.env - copy $TOOL/.env.schema and fill it in" >&2
+  echo "Missing $TOOL_DIR/.env - copy $TOOL_DIR/.env.schema and fill it in" >&2
   exit 1
 fi
 
@@ -49,7 +49,7 @@ Type=simple
 User=$SERVICE_USER
 Group=$SERVICE_GROUP
 WorkingDirectory=$TOOL_DIR
-ExecStart=$NODE_BIN .
+ExecStart=$NODE_BIN index.mjs
 Restart=always
 RestartSec=30
 StandardOutput=journal

@@ -1,13 +1,8 @@
 import { spawn } from "node:child_process";
 import { rename, rm } from "node:fs/promises";
-
-import ffmpegStatic from "ffmpeg-static";
+import process from "node:process";
 
 import type { DownloadResult } from "./vigi/download.ts";
-
-// `ffmpeg-static` is CommonJS (`module.exports = path`) but ships ESM-style
-// types, so TypeScript infers the namespace object instead of the string.
-const ffmpegPath = ffmpegStatic as unknown as string | null;
 
 function audioInputFormat(codec: string): string | undefined {
   const normalized = codec.toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
@@ -63,12 +58,7 @@ export async function muxToMp4(
   streams: DownloadResult,
   outputPath: string,
 ): Promise<void> {
-  if (ffmpegPath === null) {
-    throw new Error(
-      "ffmpeg binary is unavailable - is `ffmpeg-static` installed for this platform?",
-    );
-  }
-
+  const ffmpegPath = process.env["FFMPEG_PATH"] ?? "ffmpeg";
   const temporaryPath = `${outputPath}.part`;
   const args = buildArguments(streams, temporaryPath);
 

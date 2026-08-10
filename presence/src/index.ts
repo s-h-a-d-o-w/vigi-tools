@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { loadDotEnv } from "shared/env.ts";
 import { log } from "shared/log.ts";
 import { runForever } from "shared/loop.ts";
@@ -15,7 +13,7 @@ import { anyDevicePresent } from "./ping.ts";
 // The device expires tokens after half an hour, so refresh well before that.
 const TOKEN_LIFETIME_MS = 20 * 60 * 1000;
 
-loadDotEnv(path.join(import.meta.dirname, ".."));
+loadDotEnv(import.meta.dirname);
 
 const config = loadConfig();
 const controlApi: ControlApiOptions = {
