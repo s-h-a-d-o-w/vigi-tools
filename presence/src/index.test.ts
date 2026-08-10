@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  bootService,
+  CONTROL_API,
+  PASSWORD,
+  stubDeviceEnv,
+  USERNAME,
+} from "shared/testing.ts";
 import type { ControlApiOptions } from "shared/vigi/control-api.ts";
 
 const mocks = vi.hoisted(() => ({
@@ -45,25 +52,11 @@ vi.mock(import("shared/log.ts"), () => ({
   logError: mocks.logError,
 }));
 
-const CONTROL_API: ControlApiOptions = {
-  host: "camera.example",
-  port: 4443,
-  rejectUnauthorized: false,
-};
-
 const TOKEN_LIFETIME_MS = 20 * 60 * 1000;
 
 /** Boots a fresh copy of the service and hands back its check callback. */
-async function startService(): Promise<() => Promise<void>> {
-  vi.resetModules();
-  await import("./index.ts");
-
-  const check = mocks.runForever.mock.calls[0]?.[1];
-  if (check === undefined) {
-    throw new Error("the service never started its check loop");
-  }
-
-  return check;
+function startService(): Promise<() => Promise<void>> {
+  return bootService(mocks.runForever, () => import("./index.ts"));
 }
 
 describe("presence service", () => {
@@ -79,13 +72,11 @@ describe("presence service", () => {
     mocks.anyDevicePresent.mockResolvedValue(undefined);
     mocks.runForever.mockResolvedValue(undefined);
 
-    vi.stubEnv("VIGI_HOST", "camera.example");
-    vi.stubEnv("API_PORT", "4443");
-    vi.stubEnv("USERNAME", "operator");
-    vi.stubEnv("PASSWORD", "hunter2");
-    vi.stubEnv("PRESENCE_DEVICES", "phone, tablet");
-    vi.stubEnv("CHECK_INTERVAL_MS", "30000");
-    vi.stubEnv("PING_TIMEOUT_MS", "2500");
+    stubDeviceEnv({
+      PRESENCE_DEVICES: "phone, tablet",
+      CHECK_INTERVAL_MS: "30000",
+      PING_TIMEOUT_MS: "2500",
+    });
   });
 
   afterEach(() => {
@@ -112,8 +103,8 @@ describe("presence service", () => {
 
     expect(mocks.authenticate).toHaveBeenCalledWith(
       CONTROL_API,
-      "operator",
-      "hunter2",
+      USERNAME,
+      PASSWORD,
     );
     expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledWith(
       CONTROL_API,
