@@ -11,6 +11,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.ts",
+    "dev": "node ./src/cli/index.ts",
     "format": "oxfmt",
     "lint": "oxlint",
     "prepublishOnly": "pnpm build",
