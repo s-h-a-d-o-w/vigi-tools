@@ -15,7 +15,7 @@ import {
 import type { EnvField } from "../shared/env-schema.ts";
 
 import { envFilePath } from "./env-file.ts";
-import { TOOLS, type ToolName } from "./tools.ts";
+import { tools, type ToolName } from "./tools.ts";
 
 function renderField(field: EnvField, value: string | undefined): string {
   const assignment =
@@ -54,7 +54,7 @@ export async function configure(tool: ToolName): Promise<void> {
   }
 
   // Sort required fields first so the user is prompted for them before the optional ones.
-  const fields = TOOLS[tool].envSchema.toSorted(
+  const fields = tools[tool].envSchema.toSorted(
     (a, b) => Number(a.default !== undefined) - Number(b.default !== undefined),
   );
   const inputs: string[] = [];

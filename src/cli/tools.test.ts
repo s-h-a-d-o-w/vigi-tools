@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { deviceEnvSchema } from "#shared/env-schema.ts";
 
-import { isToolName, TOOLS } from "./tools.ts";
+import { isToolName, tools } from "./tools.ts";
 
 describe("tool registry", () => {
   it("describes every tool and reuses the shared device settings", () => {
-    expect(Object.keys(TOOLS)).toStrictEqual(["downloader", "presence"]);
+    expect(Object.keys(tools)).toStrictEqual(["downloader", "presence"]);
 
-    for (const tool of Object.values(TOOLS)) {
+    for (const tool of Object.values(tools)) {
       expect(tool.description).not.toBe("");
       expect(tool.envSchema).toStrictEqual(
         expect.arrayContaining(deviceEnvSchema),

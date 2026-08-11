@@ -5,17 +5,17 @@ import process from "node:process";
 import { configure } from "./configure.ts";
 import { loadEnvFile } from "./env-file.ts";
 import { install, uninstall } from "./service.ts";
-import { isToolName, TOOLS, type ToolName } from "./tools.ts";
+import { isToolName, tools, type ToolName } from "./tools.ts";
 
 function usage(): string {
-  const tools = Object.entries(TOOLS)
+  const toolEntries = Object.entries(tools)
     .map(([name, tool]) => `  ${name.padEnd(12)}${tool.description}`)
     .join("\n");
 
   return `Usage: vigi-tools <tool> [command]
 
 Tools:
-${tools}
+${toolEntries}
 
 Commands:
   (none)      run the tool in the foreground
@@ -27,7 +27,7 @@ Commands:
 async function runTool(tool: ToolName): Promise<void> {
   loadEnvFile(tool);
 
-  await import(new URL(`../${tool}/index.js`, import.meta.url).href);
+  await tools[tool].run();
 }
 
 async function main(): Promise<void> {
