@@ -17,7 +17,8 @@ export const deviceEnvSchema: EnvField[] = [
   },
   {
     name: "PASSWORD",
-    description: "Password of the camera account",
+    description:
+      "Password of the camera account - Put it in quotes if it contains special characters!",
     secret: true,
   },
   {
