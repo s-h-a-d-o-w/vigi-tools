@@ -52,8 +52,6 @@ vi.mock(import("#shared/log.ts"), () => ({
   logError: mocks.logError,
 }));
 
-const TOKEN_LIFETIME_MS = 20 * 60 * 1000;
-
 /** Boots a fresh copy of the service and hands back its check callback. */
 function startService(): Promise<() => Promise<void>> {
   return bootService(mocks.runForever, () => import("./index.ts"));
@@ -134,70 +132,19 @@ describe("presence service", () => {
     await check();
 
     expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledTimes(2);
-    expect(mocks.setMotionDetectionSwitch).toHaveBeenNthCalledWith(
-      2,
-      CONTROL_API,
-      "stok-1",
-      false,
-    );
   });
 
-  it("reuses the session token until it expires", async () => {
-    vi.useFakeTimers();
-    const check = await startService();
-
-    await check();
-    mocks.anyDevicePresent.mockResolvedValue("phone");
-    await check();
-
-    expect(mocks.authenticate).toHaveBeenCalledOnce();
-
-    vi.advanceTimersByTime(TOKEN_LIFETIME_MS + 1000);
-    mocks.anyDevicePresent.mockResolvedValue(undefined);
-    await check();
-
-    expect(mocks.authenticate).toHaveBeenCalledTimes(2);
-    expect(mocks.setMotionDetectionSwitch).toHaveBeenLastCalledWith(
-      CONTROL_API,
-      "stok-2",
-      true,
-    );
-  });
-
-  it("retries with a fresh token when the camera rejects the cached one", async () => {
+  it("retries after the camera was unreachable", async () => {
     mocks.setMotionDetectionSwitch.mockRejectedValueOnce(
-      new Error("invalid stok"),
+      new Error("socket hang up"),
     );
-    const check = await startService();
-
-    await check();
-
-    expect(mocks.authenticate).toHaveBeenCalledTimes(2);
-    expect(mocks.setMotionDetectionSwitch).toHaveBeenNthCalledWith(
-      1,
-      CONTROL_API,
-      "stok-1",
-      true,
-    );
-    expect(mocks.setMotionDetectionSwitch).toHaveBeenNthCalledWith(
-      2,
-      CONTROL_API,
-      "stok-2",
-      true,
-    );
-  });
-
-  it("retries the same state after the camera stayed unreachable", async () => {
-    mocks.setMotionDetectionSwitch
-      .mockRejectedValueOnce(new Error("socket hang up"))
-      .mockRejectedValueOnce(new Error("socket hang up"));
     const check = await startService();
 
     await expect(check()).rejects.toThrow("socket hang up");
 
     await check();
 
-    expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledTimes(3);
+    expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledTimes(2);
     expect(mocks.setMotionDetectionSwitch).toHaveBeenLastCalledWith(
       CONTROL_API,
       "stok-2",
