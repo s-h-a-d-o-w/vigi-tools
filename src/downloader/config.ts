@@ -12,6 +12,6 @@ export function loadConfig() {
     rtspPort: optionalNumber("RTSP_PORT", 554),
     targetDir: path.resolve(process.cwd(), requiredString("TARGET_DIR")),
     checkPreviousHours: optionalNumber("CHECK_PREVIOUS_HOURS", 24),
-    checkIntervalMs: optionalNumber("CHECK_INTERVAL_MS", 15 * 60_000),
+    checkIntervalMs: optionalNumber("CHECK_INTERVAL_MS", 35_000),
   };
 }
