@@ -9,7 +9,7 @@ CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable th
 
 ## Requirements (running, not building)
 
-- Node.js 22+ (intentionally legacy for 32-bit (armhf) Raspberry Pi support)
+- Node.js
 - ffmpeg globally available on PATH (for `downloader` only)
 
 ## How to use
