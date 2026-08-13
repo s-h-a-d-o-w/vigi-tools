@@ -122,7 +122,7 @@ describe("presence service", () => {
     expect(mocks.log).toHaveBeenCalledWith("tablet is on the network");
   });
 
-  it("only writes to the camera when the state changes", async () => {
+  it("only toggles motion detection when the state changes", async () => {
     const check = await startService();
 
     await check();
@@ -132,23 +132,5 @@ describe("presence service", () => {
     await check();
 
     expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledTimes(2);
-  });
-
-  it("retries after the camera was unreachable", async () => {
-    mocks.setMotionDetectionSwitch.mockRejectedValueOnce(
-      new Error("socket hang up"),
-    );
-    const check = await startService();
-
-    await expect(check()).rejects.toThrow("socket hang up");
-
-    await check();
-
-    expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledTimes(2);
-    expect(mocks.setMotionDetectionSwitch).toHaveBeenLastCalledWith(
-      CONTROL_API,
-      "stok-2",
-      true,
-    );
   });
 });

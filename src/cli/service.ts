@@ -93,8 +93,9 @@ User=${user}
 Group=${group}
 WorkingDirectory=${process.cwd()}
 ExecStart="${process.execPath}" "${exec}" ${tool}
-Restart=always
-RestartSec=30
+# No automatic restart: retrying a failing camera call can lock the account for
+# ever longer periods.
+Restart=no
 StandardOutput=journal
 StandardError=journal
 

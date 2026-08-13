@@ -27,8 +27,10 @@ To run as a service:
 vigi-tools presence install
 ```
 
-A service runs as the user who invoked it, is restarted automatically and
-starts on boot. Logs go to the journal:
+A service runs as the user who invoked it and starts on boot. It is not
+restarted automatically: An error stops it so that repeated failing API calls cannot get the account locked out
+
+Logs go to the journal:
 
 ```bash
 journalctl -u vigi-<tool> -f
