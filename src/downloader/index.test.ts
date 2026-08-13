@@ -164,7 +164,7 @@ describe("downloader service", () => {
       TARGET_DIR,
       RTSP_PORT: "1554",
       CHECK_PREVIOUS_HOURS: "2",
-      CHECK_INTERVAL_MS: "60000",
+      CHECK_INTERVAL_SECONDS: "60",
     });
   });
 

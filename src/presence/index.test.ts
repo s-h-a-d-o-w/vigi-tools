@@ -72,7 +72,7 @@ describe("presence service", () => {
 
     stubDeviceEnv({
       PRESENCE_DEVICES: "phone, tablet",
-      CHECK_INTERVAL_MS: "30000",
+      CHECK_INTERVAL_SECONDS: "30",
       PING_TIMEOUT_SECONDS: "3",
     });
   });

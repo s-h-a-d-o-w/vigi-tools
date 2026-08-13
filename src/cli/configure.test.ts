@@ -222,7 +222,7 @@ describe(configure, () => {
     expect(optionsOf(mocks.text, "AWS_REGION")).toBeUndefined();
     expect(optionsOf(mocks.password, "AWS_SECRET_ACCESS_KEY")).toBeUndefined();
     expect(written()).toContain("# AWS_REGION=\n");
-    expect(written()).toContain("# NOTIFY_QUIET_PERIOD_MS=120000");
+    expect(written()).toContain("# NOTIFY_QUIET_PERIOD_SECONDS=120");
   });
 
   it("asks for the dependent fields once the one they need has a value", async () => {

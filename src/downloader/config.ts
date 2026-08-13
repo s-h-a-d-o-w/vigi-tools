@@ -31,7 +31,7 @@ function loadNotifyConfig(host: string): NotifyConfig | undefined {
     region: requiredString("AWS_REGION"),
     accessKeyId: requiredString("AWS_ACCESS_KEY_ID"),
     secretAccessKey: requiredString("AWS_SECRET_ACCESS_KEY"),
-    quietPeriodMs: optionalNumber("NOTIFY_QUIET_PERIOD_MS", 120_000),
+    quietPeriodMs: optionalNumber("NOTIFY_QUIET_PERIOD_SECONDS", 120) * 1000,
   };
 }
 
@@ -43,7 +43,7 @@ export function loadConfig() {
     rtspPort: optionalNumber("RTSP_PORT", 554),
     targetDir: path.resolve(process.cwd(), requiredString("TARGET_DIR")),
     checkPreviousHours: optionalNumber("CHECK_PREVIOUS_HOURS", 24),
-    checkIntervalMs: optionalNumber("CHECK_INTERVAL_MS", 35_000),
+    checkIntervalMs: optionalNumber("CHECK_INTERVAL_SECONDS", 35) * 1000,
     notifications: loadNotifyConfig(device.host),
   };
 }

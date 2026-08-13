@@ -12,9 +12,9 @@ export const envSchema: EnvField[] = [
     default: "554",
   },
   {
-    name: "CHECK_INTERVAL_MS",
-    description: "How often the camera is checked for new recordings (ms)",
-    default: "35000",
+    name: "CHECK_INTERVAL_SECONDS",
+    description: "How often the camera is checked for new recordings (seconds)",
+    default: "35",
   },
   {
     name: "CHECK_PREVIOUS_HOURS",
@@ -50,10 +50,10 @@ export const envSchema: EnvField[] = [
     requires: "NOTIFY_EMAIL_TO",
   },
   {
-    name: "NOTIFY_QUIET_PERIOD_MS",
+    name: "NOTIFY_QUIET_PERIOD_SECONDS",
     description:
-      'How long after the last download the "no more activity" notification is sent (ms)',
-    default: "120000",
+      'How long after the last download the "no more activity" notification is sent (seconds)',
+    default: "120",
     requires: "NOTIFY_EMAIL_TO",
   },
 ];

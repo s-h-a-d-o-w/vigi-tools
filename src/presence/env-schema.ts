@@ -8,9 +8,9 @@ export const envSchema: EnvField[] = [
       "Comma-separated hostnames or IPs whose presence disables motion detection",
   },
   {
-    name: "CHECK_INTERVAL_MS",
-    description: "How often device presence is checked (ms)",
-    default: "60000",
+    name: "CHECK_INTERVAL_SECONDS",
+    description: "How often device presence is checked (seconds)",
+    default: "32",
   },
   {
     name: "PING_TIMEOUT_SECONDS",
