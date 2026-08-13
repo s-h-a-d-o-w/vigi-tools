@@ -7,6 +7,8 @@ export type EnvField = {
   description: string;
   default?: string;
   secret?: boolean;
+  /** Name of the field that has to have a value for this one to apply. */
+  requires?: string;
 };
 
 /** The connection settings every tool in this workspace needs. */
@@ -17,8 +19,7 @@ export const deviceEnvSchema: EnvField[] = [
   },
   {
     name: "PASSWORD",
-    description:
-      "Password of the camera account - Put it in quotes if it contains special characters!",
+    description: "Password of the camera account",
     secret: true,
   },
   {

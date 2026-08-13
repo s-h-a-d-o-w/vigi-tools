@@ -12,6 +12,7 @@ import {
 import { EVENT_TYPES, type MediaEntry } from "#shared/types.ts";
 import type { ControlApiOptions } from "#shared/vigi/control-api.ts";
 
+import type { BatchResult, Notifier } from "./notify.ts";
 import type { DownloadOptions, DownloadResult } from "./vigi/download.ts";
 
 const mocks = vi.hoisted(() => ({
@@ -55,6 +56,10 @@ const mocks = vi.hoisted(() => ({
   rm: vi.fn<typeof rm>(),
   runForever:
     vi.fn<(intervalMs: number, check: () => Promise<void>) => Promise<void>>(),
+  createNotifier: vi.fn<() => Notifier>(),
+  downloadsStarted: vi.fn<() => void>(),
+  downloadsFinished: vi.fn<(result: BatchResult) => void>(),
+  flush: vi.fn<() => Promise<void>>(),
   log: vi.fn<(message: string) => void>(),
   logError: vi.fn<(message: string) => void>(),
 }));
@@ -68,6 +73,9 @@ vi.mock(import("./media-store.ts"), () => ({
   mediaFilePath: mocks.mediaFilePath,
 }));
 vi.mock(import("./mux.ts"), () => ({ muxToMp4: mocks.muxToMp4 }));
+vi.mock(import("./notify.ts"), () => ({
+  createNotifier: mocks.createNotifier,
+}));
 vi.mock(import("./vigi/download.ts"), () => ({
   downloadMedia: mocks.downloadMedia,
 }));
@@ -145,6 +153,12 @@ describe("downloader service", () => {
     mocks.mkdir.mockResolvedValue(undefined);
     mocks.rm.mockResolvedValue(undefined);
     mocks.runForever.mockResolvedValue(undefined);
+    mocks.flush.mockResolvedValue(undefined);
+    mocks.createNotifier.mockReturnValue({
+      downloadsStarted: mocks.downloadsStarted,
+      downloadsFinished: mocks.downloadsFinished,
+      flush: mocks.flush,
+    });
 
     stubDeviceEnv({
       TARGET_DIR,
@@ -356,5 +370,35 @@ describe("downloader service", () => {
 
     expect(mocks.downloadMedia).not.toHaveBeenCalled();
     expect(mocks.markDownloadStarted).not.toHaveBeenCalled();
+    expect(mocks.downloadsStarted).not.toHaveBeenCalled();
+    expect(mocks.downloadsFinished).not.toHaveBeenCalled();
+  });
+
+  it("notifies when a batch of downloads begins and ends", async () => {
+    const check = await startService();
+
+    await check();
+
+    expect(mocks.downloadsStarted).toHaveBeenCalledOnce();
+    expect(mocks.downloadsFinished).toHaveBeenCalledExactlyOnceWith({
+      downloaded: 2,
+      failed: 0,
+    });
+    expect(mocks.flush).not.toHaveBeenCalled();
+  });
+
+  it("flushes the summary before a failure stops the service", async () => {
+    mocks.downloadMedia.mockRejectedValue(new Error("socket hang up"));
+    const check = await startService();
+
+    await expect(check()).rejects.toThrow(
+      "2 recording(s) could not be downloaded",
+    );
+
+    expect(mocks.downloadsFinished).toHaveBeenCalledExactlyOnceWith({
+      downloaded: 0,
+      failed: 2,
+    });
+    expect(mocks.flush).toHaveBeenCalledWith();
   });
 });

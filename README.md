@@ -2,7 +2,7 @@
 
 CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable this in the camera settings).
 
-- `downloader` - syncs videos from the camera to a local directory. On error, delete the `.json` to retry.
+- `downloader` - syncs videos from the camera to a local directory. On error, delete the `.json` to retry. (Also provides the option to send e-mail notifications via AWS SES when downloads start and finish.)
 - `presence` - pings the devices listed in `PRESENCE_DEVICES` once per
   `CHECK_INTERVAL_MS` and turns motion detection off while any of them is on the
   network, back on once none are. (All sub-settings (e.g. sensitivity) you've set via web UI or elsewhere are retained.)

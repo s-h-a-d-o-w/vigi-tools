@@ -17,11 +17,24 @@ import type { EnvField } from "../shared/env-schema.ts";
 import { envFilePath } from "./env-file.ts";
 import { tools, type ToolName } from "./tools.ts";
 
+/**
+ * Users shouldn't have to escape characters or add quotes around passwords themselves, so we add quotes.
+ */
+function quote(value: string): string {
+  const mark = ["'", '"', "`"].find((candidate) => !value.includes(candidate));
+
+  return mark === undefined ? value : `${mark}${value}${mark}`;
+}
+
 function renderField(field: EnvField, value: string | undefined): string {
+  // Secrets tend to hold characters that only survive inside quotes.
+  const rendered =
+    value !== undefined && field.secret === true ? quote(value) : value;
+
   const assignment =
-    value === undefined
+    rendered === undefined
       ? `# ${field.name}=${field.default ?? ""}`
-      : `${field.name}=${value}`;
+      : `${field.name}=${rendered}`;
 
   return `# ${field.description}\n${assignment}`;
 }
@@ -41,6 +54,21 @@ function required(value: string | undefined): string | undefined {
     : undefined;
 }
 
+/** Required fields come first, fields that depend on another one last. */
+function promptOrder(field: EnvField): number {
+  if (field.requires !== undefined) {
+    return 2;
+  }
+
+  return field.default === undefined ? 0 : 1;
+}
+
+function isAnswered(answers: NodeJS.Dict<string>, name: string): boolean {
+  const answer = answers[name];
+
+  return answer !== undefined && answer !== "";
+}
+
 export async function configure(tool: ToolName): Promise<void> {
   const file = envFilePath(tool);
   const existing = await readExisting(file);
@@ -53,11 +81,14 @@ export async function configure(tool: ToolName): Promise<void> {
     );
   }
 
-  // Sort required fields first so the user is prompted for them before the optional ones.
+  // Fields are asked in the order they can be answered in: required ones first,
+  // then the optional ones and last those that only apply once another field
+  // has a value.
   const fields = tools[tool].envSchema.toSorted(
-    (a, b) => Number(a.default !== undefined) - Number(b.default !== undefined),
+    (a, b) => promptOrder(a) - promptOrder(b),
   );
   const inputs: string[] = [];
+  const answers: NodeJS.Dict<string> = {};
 
   for (const field of fields) {
     // A masked prompt cannot be pre-filled, so an empty secret keeps what the file had.
@@ -65,6 +96,11 @@ export async function configure(tool: ToolName): Promise<void> {
     const keepable = field.secret === true ? current : undefined;
     const optional = field.default !== undefined || keepable !== undefined;
     const message = field.description;
+
+    if (field.requires !== undefined && !isAnswered(answers, field.requires)) {
+      inputs.push(renderField(field, undefined));
+      continue;
+    }
 
     const answer = await (field.secret === true
       ? password({
@@ -88,8 +124,10 @@ export async function configure(tool: ToolName): Promise<void> {
     }
 
     const value = answer.trim();
+    const resolved = value === "" ? keepable : value;
 
-    inputs.push(renderField(field, value === "" ? keepable : value));
+    answers[field.name] = resolved;
+    inputs.push(renderField(field, resolved));
   }
 
   await writeFile(file, `${inputs.join("\n\n")}\n`, { mode: 0o600 });

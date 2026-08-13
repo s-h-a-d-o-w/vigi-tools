@@ -6,7 +6,8 @@ import type { chmod, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { envSchema } from "../presence/env-schema.ts";
+import { envSchema as downloaderSchema } from "../downloader/env-schema.ts";
+import { envSchema as presenceSchema } from "../presence/env-schema.ts";
 
 import { configure } from "./configure.ts";
 
@@ -55,8 +56,9 @@ const ENTER = Symbol("enter");
 /** The variable a prompt is asking about, which asks with its description. */
 function fieldOf(message: string): string {
   return (
-    envSchema.find(({ description }) => message.startsWith(description))
-      ?.name ?? ""
+    [...presenceSchema, ...downloaderSchema].find(({ description }) =>
+      message.startsWith(description),
+    )?.name ?? ""
   );
 }
 
@@ -143,7 +145,15 @@ describe(configure, () => {
 
     expect(optionsOf(mocks.password, "PASSWORD")).toMatchObject({ mask: "*" });
     expect(optionsOf(mocks.text, "PASSWORD")).toBeUndefined();
-    expect(written()).toContain("PASSWORD=hunter2");
+    expect(written()).toContain("PASSWORD='hunter2'");
+  });
+
+  it("quotes a secret with a quote character it does not contain", async () => {
+    answer({ PASSWORD: "it's #1" });
+
+    await configure("presence");
+
+    expect(written()).toContain('PASSWORD="it\'s #1"');
   });
 
   it("rejects an empty answer where nothing can fill in", async () => {
@@ -192,7 +202,7 @@ describe(configure, () => {
     const options = optionsOf(mocks.password, "PASSWORD");
     expect(options?.message).toContain("keep the current one");
     expect(options?.validate).toBeUndefined();
-    expect(written()).toContain("PASSWORD=old-secret\n");
+    expect(written()).toContain("PASSWORD='old-secret'\n");
   });
 
   it("writes nothing when a prompt is cancelled", async () => {
@@ -202,5 +212,36 @@ describe(configure, () => {
 
     expect(mocks.cancel).toHaveBeenCalledWith("Nothing was written.");
     expect(mocks.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("skips the fields that depend on an unanswered one", async () => {
+    answer({ TARGET_DIR: "/recordings", NOTIFY_EMAIL_TO: "" });
+
+    await configure("downloader");
+
+    expect(optionsOf(mocks.text, "AWS_REGION")).toBeUndefined();
+    expect(optionsOf(mocks.password, "AWS_SECRET_ACCESS_KEY")).toBeUndefined();
+    expect(written()).toContain("# AWS_REGION=\n");
+    expect(written()).toContain("# NOTIFY_QUIET_PERIOD_MS=120000");
+  });
+
+  it("asks for the dependent fields once the one they need has a value", async () => {
+    answer({
+      TARGET_DIR: "/recordings",
+      NOTIFY_EMAIL_TO: "owner@example.com",
+      NOTIFY_EMAIL_FROM: "camera@example.com",
+      AWS_REGION: "eu-central-1",
+      AWS_ACCESS_KEY_ID: "AKIAEXAMPLE",
+      AWS_SECRET_ACCESS_KEY: "s3cret",
+    });
+
+    await configure("downloader");
+
+    expect(optionsOf(mocks.text, "AWS_REGION")?.validate).toBeTypeOf(
+      "function",
+    );
+    expect(written()).toContain("NOTIFY_EMAIL_TO=owner@example.com");
+    expect(written()).toContain("AWS_REGION=eu-central-1");
+    expect(written()).toContain("AWS_SECRET_ACCESS_KEY='s3cret'");
   });
 });

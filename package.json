@@ -29,6 +29,7 @@
     "dist"
   ],
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1108.0",
     "@clack/prompts": "^1.7.0"
   },
   "devDependencies": {

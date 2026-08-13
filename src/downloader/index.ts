@@ -16,6 +16,7 @@ import {
   mediaFilePath,
 } from "./media-store.ts";
 import { muxToMp4 } from "./mux.ts";
+import { createNotifier } from "./notify.ts";
 import { downloadMedia } from "./vigi/download.ts";
 
 async function fetchEntry(
@@ -51,6 +52,7 @@ const controlApi = {
   rejectUnauthorized: config.rejectUnauthorized,
 };
 const workDir = path.join(config.targetDir, ".work");
+const notifier = createNotifier(config.notifications);
 
 async function check(): Promise<void> {
   await mkdir(config.targetDir, { recursive: true });
@@ -73,6 +75,10 @@ async function check(): Promise<void> {
   log(
     `${entries.length} recording(s) on the device, ${missing.length} missing from ${config.targetDir}`,
   );
+
+  if (missing.length > 0) {
+    notifier.downloadsStarted();
+  }
 
   // Claim every entry up front so a concurrent run does not retry them.
   for (const entry of missing) {
@@ -102,7 +108,16 @@ async function check(): Promise<void> {
 
   await rm(workDir, { recursive: true, force: true });
 
+  if (missing.length > 0) {
+    notifier.downloadsFinished({
+      downloaded: missing.length - failures,
+      failed: failures,
+    });
+  }
+
   if (failures > 0) {
+    // A failure stops the service, so the summary cannot wait for the quiet period.
+    await notifier.flush();
     throw new Error(`${failures} recording(s) could not be downloaded`);
   }
 }
