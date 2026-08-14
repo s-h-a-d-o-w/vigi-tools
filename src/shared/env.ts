@@ -1,44 +1,66 @@
 import process from "node:process";
 
-export function requiredString(name: string): string {
-  const value = process.env[name];
+import type { EnvField } from "./env-schema.ts";
 
-  if (value === undefined || value === "") {
-    throw new Error(`Missing required environment variable: ${name}`);
+/**
+ * Reads variables through a schema, so that defaults live in exactly one place
+ * - the place that also documents them for `vigi-tools configure`.
+ */
+export function createEnvReader(schema: EnvField[]) {
+  function read(name: string): string | undefined {
+    const field = schema.find((entry) => entry.name === name);
+
+    if (field === undefined) {
+      throw new Error(`Environment variable ${name} is not part of the schema`);
+    }
+
+    const value = process.env[name] ?? field.default;
+
+    return value === undefined || value.trim() === "" ? undefined : value;
   }
 
-  return value;
-}
+  function string(name: string): string {
+    const value = read(name);
 
-export function optionalNumber(name: string, fallback: number): number {
-  const raw = process.env[name];
+    if (value === undefined) {
+      throw new Error(`Missing required environment variable: ${name}`);
+    }
 
-  if (raw === undefined || raw === "") {
-    return fallback;
+    return value;
   }
 
-  const value = Number(raw);
-  if (!Number.isFinite(value)) {
-    throw new TypeError(
-      `Environment variable ${name} must be a number but was "${raw}"`,
-    );
+  function number(name: string): number {
+    const raw = string(name);
+    const value = Number(raw);
+
+    if (!Number.isFinite(value)) {
+      throw new TypeError(
+        `Environment variable ${name} must be a number but was "${raw}"`,
+      );
+    }
+
+    return value;
   }
 
-  return value;
-}
-
-/** Splits a comma-separated variable, dropping empty entries. */
-export function requiredList(name: string): string[] {
-  const entries = requiredString(name)
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry !== "");
-
-  if (entries.length === 0) {
-    throw new Error(
-      `Environment variable ${name} must list at least one entry`,
-    );
+  function boolean(name: string): boolean {
+    return read(name) === "true";
   }
 
-  return entries;
+  /** Splits a comma-separated variable, dropping empty entries. */
+  function list(name: string): string[] {
+    const entries = string(name)
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry !== "");
+
+    if (entries.length === 0) {
+      throw new Error(
+        `Environment variable ${name} must list at least one entry`,
+      );
+    }
+
+    return entries;
+  }
+
+  return { boolean, list, number, optionalString: read, string };
 }

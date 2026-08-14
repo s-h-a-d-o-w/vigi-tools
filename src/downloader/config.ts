@@ -2,9 +2,13 @@ import path from "node:path";
 import process from "node:process";
 
 import { loadDeviceConfig } from "../shared/config.ts";
-import { optionalNumber, requiredString } from "../shared/env.ts";
+import { createEnvReader } from "../shared/env.ts";
+
+import { envSchema } from "./env-schema.ts";
 
 export type Config = ReturnType<typeof loadConfig>;
+
+const env = createEnvReader(envSchema);
 
 export type NotifyConfig = {
   host: string;
@@ -18,20 +22,20 @@ export type NotifyConfig = {
 
 /** Notifications stay off until a recipient is configured. */
 function loadNotifyConfig(host: string): NotifyConfig | undefined {
-  const recipient = process.env["NOTIFY_EMAIL_TO"]?.trim();
+  const recipient = env.optionalString("NOTIFY_EMAIL_TO")?.trim();
 
-  if (recipient === undefined || recipient === "") {
+  if (recipient === undefined) {
     return undefined;
   }
 
   return {
     host,
     recipient,
-    sender: requiredString("NOTIFY_EMAIL_FROM"),
-    region: requiredString("AWS_REGION"),
-    accessKeyId: requiredString("AWS_ACCESS_KEY_ID"),
-    secretAccessKey: requiredString("AWS_SECRET_ACCESS_KEY"),
-    quietPeriodMs: optionalNumber("NOTIFY_QUIET_PERIOD_SECONDS", 120) * 1000,
+    sender: env.string("NOTIFY_EMAIL_FROM"),
+    region: env.string("AWS_REGION"),
+    accessKeyId: env.string("AWS_ACCESS_KEY_ID"),
+    secretAccessKey: env.string("AWS_SECRET_ACCESS_KEY"),
+    quietPeriodMs: env.number("NOTIFY_QUIET_PERIOD_SECONDS") * 1000,
   };
 }
 
@@ -40,10 +44,10 @@ export function loadConfig() {
 
   return {
     ...device,
-    rtspPort: optionalNumber("RTSP_PORT", 554),
-    targetDir: path.resolve(process.cwd(), requiredString("TARGET_DIR")),
-    checkPreviousHours: optionalNumber("CHECK_PREVIOUS_HOURS", 24),
-    checkIntervalMs: optionalNumber("CHECK_INTERVAL_SECONDS", 35) * 1000,
+    rtspPort: env.number("RTSP_PORT"),
+    targetDir: path.resolve(process.cwd(), env.string("TARGET_DIR")),
+    checkPreviousHours: env.number("CHECK_PREVIOUS_HOURS"),
+    checkIntervalMs: env.number("CHECK_INTERVAL_SECONDS") * 1000,
     notifications: loadNotifyConfig(device.host),
   };
 }

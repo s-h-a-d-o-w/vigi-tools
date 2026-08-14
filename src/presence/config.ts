@@ -1,11 +1,15 @@
 import { loadDeviceConfig } from "../shared/config.ts";
-import { optionalNumber, requiredList } from "../shared/env.ts";
+import { createEnvReader } from "../shared/env.ts";
+
+import { envSchema } from "./env-schema.ts";
 
 export function loadConfig() {
+  const env = createEnvReader(envSchema);
+
   return {
     ...loadDeviceConfig(),
-    devices: requiredList("PRESENCE_DEVICES"),
-    checkIntervalMs: optionalNumber("CHECK_INTERVAL_SECONDS", 60) * 1000,
-    pingTimeoutSeconds: optionalNumber("PING_TIMEOUT_SECONDS", 4),
+    devices: env.list("PRESENCE_DEVICES"),
+    checkIntervalMs: env.number("CHECK_INTERVAL_SECONDS") * 1000,
+    pingTimeoutSeconds: env.number("PING_TIMEOUT_SECONDS"),
   };
 }
