@@ -17,14 +17,14 @@ CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable th
 ```bash
 npm install --global vigi-tools
 # Run where you want to store the config file(s).
-vigi-tools presence configure
-vigi-tools presence
+vigi-tools <tool> configure
+vigi-tools <tool>
 ```
 
 To run as a service:
 
 ```bash
-vigi-tools presence install
+vigi-tools <tool> install
 ```
 
 A service runs as the user who invoked it and starts on boot. It is not
@@ -39,5 +39,30 @@ journalctl -u vigi-<tool> -f
 To stop and remove:
 
 ```bash
-vigi-tools presence uninstall
+vigi-tools <tool> uninstall
+```
+
+### Note on using SES
+
+I recommend creating an IAM user with something like the following policy, so that if the token leaks, an attacker can only send emails to you:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["ses:SendEmail", "ses:SendRawEmail"],
+      "Resource": "*",
+      "Condition": {
+        "ForAllValues:StringEquals": {
+          "ses:Recipients": ["your@email.com"]
+        },
+        "StringEquals": {
+          "ses:FromAddress": "your@email.com"
+        }
+      }
+    }
+  ]
+}
 ```
