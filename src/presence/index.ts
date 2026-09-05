@@ -23,7 +23,7 @@ let appliedState: boolean | undefined;
 async function check(): Promise<void> {
   const presentDevice = await anyDevicePresent(
     config.devices,
-    config.scanSeconds,
+    config.checkIntervalSeconds,
   );
   const shouldDetect = presentDevice === undefined;
 
@@ -41,4 +41,5 @@ async function check(): Promise<void> {
   log(`  motion detection turned ${shouldDetect ? "on" : "off"}`);
 }
 
-await runForever(config.checkIntervalMs, check);
+// The scan inside `check` already lasts a full interval, so no extra wait.
+await runForever(0, check);

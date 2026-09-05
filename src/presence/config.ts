@@ -9,7 +9,6 @@ export function loadConfig() {
   return {
     ...loadDeviceConfig(),
     devices: env.list("PRESENCE_DEVICES"),
-    checkIntervalMs: env.number("CHECK_INTERVAL_SECONDS") * 1000,
-    scanSeconds: env.number("BLE_SCAN_SECONDS"),
+    checkIntervalSeconds: env.number("CHECK_INTERVAL_SECONDS"),
   };
 }

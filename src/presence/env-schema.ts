@@ -9,12 +9,7 @@ export const envSchema: EnvField[] = [
   },
   {
     name: "CHECK_INTERVAL_SECONDS",
-    description: "How often device presence is checked (seconds)",
-    default: "32",
-  },
-  {
-    name: "BLE_SCAN_SECONDS",
-    description: "How long each Bluetooth LE scan runs (seconds)",
-    default: "10",
+    description: "How long each Bluetooth LE scan runs (seconds).",
+    default: "4",
   },
 ];

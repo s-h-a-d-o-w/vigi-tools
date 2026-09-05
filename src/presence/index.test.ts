@@ -73,7 +73,6 @@ describe("presence service", () => {
     stubDeviceEnv({
       PRESENCE_DEVICES: "AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66",
       CHECK_INTERVAL_SECONDS: "30",
-      BLE_SCAN_SECONDS: "10",
     });
   });
 
@@ -82,15 +81,15 @@ describe("presence service", () => {
     vi.useRealTimers();
   });
 
-  it("checks presence on the configured schedule", async () => {
+  it("scans for the whole check interval, back to back", async () => {
     const check = await startService();
 
     await check();
 
-    expect(mocks.runForever).toHaveBeenCalledWith(30_000, expect.any(Function));
+    expect(mocks.runForever).toHaveBeenCalledWith(0, expect.any(Function));
     expect(mocks.anyDevicePresent).toHaveBeenCalledWith(
       ["AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"],
-      10,
+      30,
     );
   });
 
