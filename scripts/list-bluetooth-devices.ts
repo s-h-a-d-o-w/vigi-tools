@@ -30,7 +30,7 @@ async function bluetoothctl(args: readonly string[]): Promise<string> {
 
 async function main(): Promise<void> {
   console.log(`Scanning for ${SCAN_SECONDS} seconds...`);
-  await bluetoothctl(["--timeout", String(SCAN_SECONDS), "scan", "on"]);
+  await bluetoothctl(["--timeout", String(SCAN_SECONDS), "scan", "le"]);
 
   const stdout = await bluetoothctl(["devices"]);
   const devices = stdout

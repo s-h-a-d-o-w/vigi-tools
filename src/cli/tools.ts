@@ -10,7 +10,7 @@ export const tools = {
   },
   presence: {
     description:
-      "turns motion detection off while a known device is on the network",
+      "turns motion detection off while a known BLE device is nearby",
     envSchema: presenceEnvSchema,
     run: () => import("../presence/index.ts"),
   },

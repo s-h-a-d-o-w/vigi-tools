@@ -6,8 +6,8 @@ import {
   setMotionDetectionSwitch,
 } from "../shared/vigi/control-api.ts";
 
+import { anyDevicePresent } from "./ble.ts";
 import { loadConfig } from "./config.ts";
-import { anyDevicePresent } from "./ping.ts";
 
 const config = loadConfig();
 const controlApi: ControlApiOptions = {
@@ -23,14 +23,12 @@ let appliedState: boolean | undefined;
 async function check(): Promise<void> {
   const presentDevice = await anyDevicePresent(
     config.devices,
-    config.pingTimeoutSeconds,
+    config.scanSeconds,
   );
   const shouldDetect = presentDevice === undefined;
 
   log(
-    presentDevice === undefined
-      ? "nobody home"
-      : `${presentDevice} is on the network`,
+    presentDevice === undefined ? "nobody home" : `${presentDevice} is nearby`,
   );
 
   if (shouldDetect === appliedState) {

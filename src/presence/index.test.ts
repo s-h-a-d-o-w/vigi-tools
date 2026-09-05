@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
     vi.fn<
       (
         devices: readonly string[],
-        timeoutSeconds: number,
+        scanSeconds: number,
       ) => Promise<string | undefined>
     >(),
   authenticate:
@@ -39,7 +39,7 @@ const mocks = vi.hoisted(() => ({
   logError: vi.fn<(message: string) => void>(),
 }));
 
-vi.mock(import("./ping.ts"), () => ({
+vi.mock(import("./ble.ts"), () => ({
   anyDevicePresent: mocks.anyDevicePresent,
 }));
 vi.mock(import("#shared/vigi/control-api.ts"), () => ({
@@ -71,9 +71,9 @@ describe("presence service", () => {
     mocks.runForever.mockResolvedValue(undefined);
 
     stubDeviceEnv({
-      PRESENCE_DEVICES: "phone, tablet",
+      PRESENCE_DEVICES: "AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66",
       CHECK_INTERVAL_SECONDS: "30",
-      PING_TIMEOUT_SECONDS: "3",
+      BLE_SCAN_SECONDS: "10",
     });
   });
 
@@ -88,7 +88,10 @@ describe("presence service", () => {
     await check();
 
     expect(mocks.runForever).toHaveBeenCalledWith(30_000, expect.any(Function));
-    expect(mocks.anyDevicePresent).toHaveBeenCalledWith(["phone", "tablet"], 3);
+    expect(mocks.anyDevicePresent).toHaveBeenCalledWith(
+      ["AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"],
+      10,
+    );
   });
 
   it("turns motion detection on when nobody is home", async () => {
@@ -108,8 +111,8 @@ describe("presence service", () => {
     );
   });
 
-  it("turns motion detection off when a device is on the network", async () => {
-    mocks.anyDevicePresent.mockResolvedValue("tablet");
+  it("turns motion detection off when a device is nearby", async () => {
+    mocks.anyDevicePresent.mockResolvedValue("11:22:33:44:55:66");
     const check = await startService();
 
     await check();
@@ -119,7 +122,7 @@ describe("presence service", () => {
       "stok-1",
       false,
     );
-    expect(mocks.log).toHaveBeenCalledWith("tablet is on the network");
+    expect(mocks.log).toHaveBeenCalledWith("11:22:33:44:55:66 is nearby");
   });
 
   it("only toggles motion detection when the state changes", async () => {
@@ -127,7 +130,7 @@ describe("presence service", () => {
 
     await check();
     await check();
-    mocks.anyDevicePresent.mockResolvedValue("phone");
+    mocks.anyDevicePresent.mockResolvedValue("AA:BB:CC:DD:EE:FF");
     await check();
     await check();
 

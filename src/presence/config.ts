@@ -10,6 +10,6 @@ export function loadConfig() {
     ...loadDeviceConfig(),
     devices: env.list("PRESENCE_DEVICES"),
     checkIntervalMs: env.number("CHECK_INTERVAL_SECONDS") * 1000,
-    pingTimeoutSeconds: env.number("PING_TIMEOUT_SECONDS"),
+    scanSeconds: env.number("BLE_SCAN_SECONDS"),
   };
 }

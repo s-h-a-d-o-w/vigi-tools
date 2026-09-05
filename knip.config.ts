@@ -1,7 +1,7 @@
 import type { KnipConfig } from "knip";
 
 const config: KnipConfig = {
-  ignoreBinaries: ["ffmpeg", "ping"],
+  ignoreBinaries: ["ffmpeg", "bluetoothctl"],
 };
 
 export default config;
