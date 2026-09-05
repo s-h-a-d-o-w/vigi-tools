@@ -46,6 +46,16 @@ To stop and remove:
 vigi-tools <tool> uninstall
 ```
 
+### Notes on BLE devices
+
+I had a hard time finding some that aren't from AliExpress, with configuration apps that may or may not be reliable, so I want to point out examples I've found: Teltonika Eye Beacon (Lithuania), Blue Charm BC04P (USA)
+
+The key thing to watch out for is configurable Tx (transmission strength), interval and overall battery time. In a modern apartment building, you may need to use very high power to get through just one wall.
+
+After configuring and initial checks with `vigi-tools presence`, I recommend running `vigi-tools presence | grep nobody` for a few days (you should see no output when your BLE device is in range) to ensure that motion detection won't turn on randomly while you're home.
+
+For me, that required maximum transmission strength (8 dB) at 1 sec. interval but with a 5 sec. presence check interval. So, realistically, collecting up to 4 samples.
+
 ### Note on using SES
 
 I recommend creating an IAM user with something like the following policy, so that if the token leaks, an attacker can only send emails to you:

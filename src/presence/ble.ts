@@ -34,8 +34,6 @@ function scan(scanSeconds: number): Promise<string> {
       (error, stdout) => {
         if (error === null) {
           const plain = stdout.replaceAll(ANSI_PATTERN, "");
-
-          console.log(plain);
           resolve(plain);
 
           return;
