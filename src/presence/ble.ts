@@ -12,7 +12,11 @@ const DISCOVERY_MARKER = "Discovery started";
 const DEVICE_LINE_PATTERN =
   /\[(?<event>NEW|CHG|DEL)\]\s+Device\s+(?<address>[\da-f]{2}(?::[\da-f]{2}){5})/iu;
 
-// A crowded room produces thousands of advertisement lines per scan.
+// bluetoothctl colours its output even when stdout is a pipe, which would
+// otherwise split "[CHG]" into unmatchable pieces.
+// oxlint-disable-next-line no-control-regex
+const ANSI_PATTERN = /\u001B\[[\d;]*m/gu;
+
 const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
 
 function scan(scanSeconds: number): Promise<string> {
@@ -24,10 +28,15 @@ function scan(scanSeconds: number): Promise<string> {
     execFile(
       "bluetoothctl",
       ["--timeout", String(seconds), "scan", "le"],
+      // A busy area produces a lot of chatter, and bluetoothctl needs a moment
+      // to wind the scan down before the kill timeout applies.
       { timeout: (seconds + 5) * 1000, maxBuffer: MAX_OUTPUT_BYTES },
       (error, stdout) => {
         if (error === null) {
-          resolve(stdout);
+          const plain = stdout.replaceAll(ANSI_PATTERN, "");
+
+          console.log(plain);
+          resolve(plain);
 
           return;
         }
@@ -46,7 +55,7 @@ function scan(scanSeconds: number): Promise<string> {
 }
 
 /** Addresses that were advertising while the scan was running. */
-function advertisedAddresses(output: string): Set<string> {
+function extractAdvertisedAddresses(output: string): Set<string> {
   const discoveryStart = output.indexOf(DISCOVERY_MARKER);
 
   if (discoveryStart === -1) {
@@ -65,6 +74,12 @@ function advertisedAddresses(output: string): Set<string> {
     }
   }
 
+  console.log(
+    `  found ${addresses.size} device(s) advertising: ${[...addresses].join(
+      ", ",
+    )}`,
+  );
+
   return addresses;
 }
 
@@ -79,7 +94,7 @@ export async function anyDevicePresent(
     }
   }
 
-  const addresses = advertisedAddresses(await scan(scanSeconds));
+  const addresses = extractAdvertisedAddresses(await scan(scanSeconds));
 
   return devices.find((device) => addresses.has(device.toUpperCase()));
 }

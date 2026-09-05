@@ -79,6 +79,22 @@ describe(anyDevicePresent, () => {
     ).resolves.toBeUndefined();
   });
 
+  it("sees through the colours bluetoothctl adds even when piped", async () => {
+    mocks.execFile.mockImplementation((_file, _args, _options, callback) => {
+      callback(
+        // oxlint-disable-next-line unicorn/no-null
+        null,
+        [
+          "Discovery started",
+          `[\u001B[0;92mNEW\u001B[0m] \u001B[1;30mDevice ${PHONE} Some Device\u001B[0m`,
+          "",
+        ].join("\n"),
+      );
+    });
+
+    await expect(anyDevicePresent([PHONE], 10)).resolves.toBe(PHONE);
+  });
+
   it("ignores the devices bluetoothctl had cached before the scan", async () => {
     respondFor([]);
 
