@@ -16,21 +16,31 @@ const controlApi: ControlApiOptions = {
   rejectUnauthorized: config.rejectUnauthorized,
 };
 
+// A single sighting proves someone is home, but BLE advertisements are easy to
+// miss, so absence has to be confirmed by several scans in a row.
+const REQUIRED_ABSENT_SCANS = 4;
+
 // Undefined until the first successful switch, so the initial state is always
 // written to the device rather than assumed.
 let appliedState: boolean | undefined;
+let absentScans = 0;
 
 async function check(): Promise<void> {
   const presentDevice = await anyDevicePresent(
     config.devices,
     config.checkIntervalSeconds,
   );
-  const shouldDetect = presentDevice === undefined;
+
+  absentScans = presentDevice === undefined ? absentScans + 1 : 0;
+  if (absentScans > 0 && absentScans < REQUIRED_ABSENT_SCANS) {
+    return;
+  }
 
   log(
-    presentDevice === undefined ? "nobody home" : `${presentDevice} is nearby`,
+    presentDevice === undefined ? `nobody home` : `${presentDevice} is nearby`,
   );
 
+  const shouldDetect = absentScans >= REQUIRED_ABSENT_SCANS;
   if (shouldDetect === appliedState) {
     return;
   }
@@ -38,7 +48,7 @@ async function check(): Promise<void> {
   const stok = await authenticate(controlApi, config.username, config.password);
   await setMotionDetectionSwitch(controlApi, stok, shouldDetect);
   appliedState = shouldDetect;
-  log(`  motion detection turned ${shouldDetect ? "on" : "off"}`);
+  log(`  motion detection turned ${appliedState ? "on" : "off"}`);
 }
 
 // The scan inside `check` already lasts a full interval, so no extra wait.

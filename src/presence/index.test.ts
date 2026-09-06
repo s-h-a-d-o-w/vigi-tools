@@ -93,8 +93,14 @@ describe("presence service", () => {
     );
   });
 
-  it("turns motion detection on when nobody is home", async () => {
+  it("turns motion detection on after four consecutive quiet scans", async () => {
     const check = await startService();
+
+    await check();
+    await check();
+    await check();
+
+    expect(mocks.setMotionDetectionSwitch).not.toHaveBeenCalled();
 
     await check();
 
@@ -107,6 +113,26 @@ describe("presence service", () => {
       CONTROL_API,
       "stok-1",
       true,
+    );
+  });
+
+  it("restarts the absence count when a device shows up again", async () => {
+    const check = await startService();
+
+    await check();
+    await check();
+    await check();
+    mocks.anyDevicePresent.mockResolvedValue("AA:BB:CC:DD:EE:FF");
+    await check();
+    mocks.anyDevicePresent.mockResolvedValue(undefined);
+    await check();
+    await check();
+    await check();
+
+    expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledExactlyOnceWith(
+      CONTROL_API,
+      "stok-1",
+      false,
     );
   });
 
@@ -127,6 +153,9 @@ describe("presence service", () => {
   it("only toggles motion detection when the state changes", async () => {
     const check = await startService();
 
+    await check();
+    await check();
+    await check();
     await check();
     await check();
     mocks.anyDevicePresent.mockResolvedValue("AA:BB:CC:DD:EE:FF");
