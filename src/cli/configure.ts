@@ -54,6 +54,21 @@ function required(value: string | undefined): string | undefined {
     : undefined;
 }
 
+/** Combines a field's own rule with whether it may be left empty at all. */
+function validator(field: EnvField, optional: boolean) {
+  if (optional && field.validate === undefined) {
+    return undefined;
+  }
+
+  return (value: string | undefined): string | undefined => {
+    if (value === undefined || value.trim() === "") {
+      return optional ? undefined : required(value);
+    }
+
+    return field.validate?.(value.trim());
+  };
+}
+
 /** Required fields come first, fields that depend on another one last. */
 function promptOrder(field: EnvField): number {
   if (field.requires !== undefined) {
@@ -109,13 +124,13 @@ export async function configure(tool: ToolName): Promise<void> {
               ? message
               : `${message} (leave empty to keep the current one)`,
           mask: "*",
-          validate: optional ? undefined : required,
+          validate: validator(field, optional),
         })
       : text({
           message,
           initialValue: current,
           placeholder: field.default,
-          validate: optional ? undefined : required,
+          validate: validator(field, optional),
         }));
 
     if (isCancel(answer)) {

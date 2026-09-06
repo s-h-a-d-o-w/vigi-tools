@@ -16,7 +16,17 @@ export function createEnvReader(schema: EnvField[]) {
 
     const value = process.env[name] ?? field.default;
 
-    return value === undefined || value.trim() === "" ? undefined : value;
+    if (value === undefined || value.trim() === "") {
+      return undefined;
+    }
+
+    const problem = field.validate?.(value);
+
+    if (problem !== undefined) {
+      throw new Error(`Environment variable ${name} is invalid: ${problem}`);
+    }
+
+    return value;
   }
 
   function string(name: string): string {

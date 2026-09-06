@@ -9,6 +9,8 @@ export type EnvField = {
   secret?: boolean;
   /** Name of the field that has to have a value for this one to apply. */
   requires?: string;
+  /** Returns why the value cannot be used, or undefined when it can. */
+  validate?: (value: string) => string | undefined;
 };
 
 /** The connection settings every tool in this workspace needs. */

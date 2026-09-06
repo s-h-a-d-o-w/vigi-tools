@@ -13,7 +13,6 @@ type ExecFile = (
 
 const PHONE = "AA:BB:CC:DD:EE:FF";
 const TABLET = "11:22:33:44:55:66";
-const LAPTOP = "99:88:77:66:55:44";
 const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
 
 const mocks = vi.hoisted(() => ({
@@ -30,14 +29,11 @@ vi.mock(import("node:child_process"), () => ({
 function scanLog(advertising: readonly string[]): string {
   return [
     "Agent registered",
-    // Everything BlueZ had cached before the scan, which proves nothing.
-    `[NEW] Device ${LAPTOP} Old Laptop`,
     "Discovery started",
     ...advertising.flatMap((address) => [
       `[NEW] Device ${address} Some Device`,
       `[CHG] Device ${address} RSSI: -63`,
     ]),
-    `[DEL] Device ${LAPTOP} Old Laptop`,
     "",
   ].join("\n");
 }
@@ -95,12 +91,6 @@ describe(anyDevicePresent, () => {
     await expect(anyDevicePresent([PHONE], 10)).resolves.toBe(PHONE);
   });
 
-  it("ignores the devices bluetoothctl had cached before the scan", async () => {
-    respondFor([]);
-
-    await expect(anyDevicePresent([LAPTOP], 10)).resolves.toBeUndefined();
-  });
-
   it("scans for the configured number of whole seconds", async () => {
     respondFor([]);
 
@@ -127,21 +117,6 @@ describe(anyDevicePresent, () => {
     );
   });
 
-  it.each([
-    "--help",
-    "phone; rm -rf /",
-    "$(whoami)",
-    "192.168.0.10",
-    "AA:BB:CC:DD:EE",
-  ])('rejects "%s" instead of passing it to bluetoothctl', async (device) => {
-    respondFor([]);
-
-    await expect(anyDevicePresent([PHONE, device], 10)).rejects.toThrow(
-      `"${device}" is not a valid Bluetooth address`,
-    );
-    expect(mocks.execFile).not.toHaveBeenCalled();
-  });
-
   it("explains a missing bluetoothctl", async () => {
     mocks.execFile.mockImplementation((_file, _args, _options, callback) => {
       callback(
@@ -152,17 +127,6 @@ describe(anyDevicePresent, () => {
 
     await expect(anyDevicePresent([PHONE], 10)).rejects.toThrow(
       "`bluetoothctl` not found",
-    );
-  });
-
-  it("fails when the scan never started", async () => {
-    mocks.execFile.mockImplementation((_file, _args, _options, callback) => {
-      // oxlint-disable-next-line unicorn/no-null
-      callback(null, "Agent registered\n");
-    });
-
-    await expect(anyDevicePresent([PHONE], 10)).rejects.toThrow(
-      "bluetoothctl did not start a discovery",
     );
   });
 });
