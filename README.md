@@ -3,18 +3,15 @@
 CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable this in the camera settings).
 
 - `downloader` - syncs videos from the camera to a local directory. On error, delete the `.json` to retry. (Also provides the option to send e-mail notifications via AWS SES when downloads start and finish.)
-- `presence` - continuously scans for the Bluetooth LE devices listed in `PRESENCE_DEVICES`, in
+- `presence` - repeatedly scans for the Bluetooth LE devices listed in `PRESENCE_DEVICES`, in
   `CHECK_INTERVAL_SECONDS` long scans, and turns motion detection off while any of them is in
   range, back on once none are. (All camera sub-settings (e.g. sensitivity) you've set via web UI or elsewhere are retained.)
-
-  To find out the address of a device, run `pnpm list-bluetooth-devices` while it
-  is advertising.
 
 ## Requirements (running, not building)
 
 - Node.js
-- ffmpeg globally available on PATH (for `downloader` only)
-- BlueZ (`bluetoothctl`) and a Bluetooth adapter (for `presence` only)
+- `ffmpeg` globally available (for `downloader` only)
+- `bluetoothctl` globally available (for `presence` only)
 
 ## How to use
 
