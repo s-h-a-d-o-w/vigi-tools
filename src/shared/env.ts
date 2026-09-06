@@ -74,3 +74,5 @@ export function createEnvReader(schema: EnvField[]) {
 
   return { boolean, list, number, optionalString: read, string };
 }
+
+export type EnvReader = ReturnType<typeof createEnvReader>;

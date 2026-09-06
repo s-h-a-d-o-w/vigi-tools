@@ -1,8 +1,8 @@
+# Using phone for presence
+
+Unreliable in every way - may drop wifi connections, may stop advertising on BT, battery may run out (as opposed to beacons where batteries usually last months to years).
+
 # Bluetooth strategies
-
-## Using phones
-
-Phones randomize their Bluetooth LE MAC address, so you can't reliably use them for presence detection. Would require pairing them.
 
 ## Continious scanning with `bluetoothctl`
 

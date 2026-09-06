@@ -5,7 +5,7 @@ CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable th
 - `downloader` - syncs videos from the camera to a local directory. On error, delete the `.json` to retry. (Also provides the option to send e-mail notifications via AWS SES when downloads start and finish.)
 - `presence` - repeatedly scans for the Bluetooth LE devices listed in `PRESENCE_DEVICES`, in
   `CHECK_INTERVAL_SECONDS` long scans, and turns motion detection off while any of them is in
-  range, back on once none are. (All camera sub-settings (e.g. sensitivity) you've set via web UI or elsewhere are retained.)
+  range, back on once none are. (All camera sub-settings (e.g. sensitivity) you've set via web UI or elsewhere are retained.) (Also provides the option to send an e-mail warning via AWS SES when a nearby device's battery gets low.)
 
 ## Requirements (running, not building)
 
@@ -45,9 +45,13 @@ vigi-tools <tool> uninstall
 
 ### Notes on BLE devices
 
-I had a hard time finding some that aren't from AliExpress, with configuration apps that may or may not be reliable, so I want to point out examples I've found: Teltonika Eye Beacon (Lithuania), Blue Charm BC04P (USA)
+**Low battery warning is only supported for Teltonika Eye Beacon, as those payloads may be vendor-specific.**
 
-The key thing to watch out for is configurable Tx (transmission strength), interval and overall battery time. In a modern apartment building, you may need to use very high power to get through just one wall.
+I had a hard time finding beacons that aren't from AliExpress, with configuration apps that may or may not be reliable, so I want to point out examples I've found: Teltonika Eye Beacon (Lithuania), Blue Charm BC04P (USA)
+
+The key thing to watch out for is configurable Tx (transmission strength), interval, overall battery time AND docs on vendor payloads for reading battery info - if you want to contribute code for your device (see e.g. [Teltonika Eye Beacon docs](https://wiki.teltonika-gps.com/view/EYE_SENSOR_/_BTSMP1#Sensor_advertising)).
+
+In an apartment building with concrete walls, you may need to use very high power to get through just one wall.
 
 After configuring and initial checks with `vigi-tools presence`, I recommend running `vigi-tools presence | grep nobody` for a few days (you should see no output when your BLE device is in range) to ensure that motion detection won't turn on randomly while you're home.
 

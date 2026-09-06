@@ -1,6 +1,4 @@
-import { SendEmailCommand, SESv2Client } from "@aws-sdk/client-sesv2";
-
-import { logError } from "../shared/log.ts";
+import { createMailer } from "../shared/ses.ts";
 
 import type { NotifyConfig } from "./config.ts";
 
@@ -24,49 +22,19 @@ const DISABLED_NOTIFIER: Notifier = {
 // Narrowing the optional configuration does not survive into the callbacks
 // below, so the configured case gets its own non-optional parameter.
 function createSesNotifier(config: NotifyConfig): Notifier {
-  const client = new SESv2Client({
-    region: config.region,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
+  const mailer = createMailer(config);
 
   // A batch spans every check that keeps downloading, so the summary is only
   // sent once no download has happened for a whole quiet period.
   let batch: BatchResult | undefined;
   let quietTimer: NodeJS.Timeout | undefined;
-  let delivery = Promise.resolve();
-
-  function send(subject: string, body: string): void {
-    delivery = delivery
-      .then(async () => {
-        await client.send(
-          new SendEmailCommand({
-            FromEmailAddress: config.sender,
-            Destination: { ToAddresses: [config.recipient] },
-            Content: {
-              Simple: {
-                Subject: { Data: subject },
-                Body: { Text: { Data: body } },
-              },
-            },
-          }),
-        );
-      })
-      .catch((error: unknown) => {
-        logError(
-          `  notification failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      });
-  }
 
   function sendSummary(): void {
     if (batch === undefined) {
       return;
     }
 
-    send(
+    mailer.send(
       `STOP activity on camera ${config.host}`,
       `${batch.downloaded} recording(s) downloaded, ${batch.failed} failed.`,
     );
@@ -82,7 +50,7 @@ function createSesNotifier(config: NotifyConfig): Notifier {
 
       if (batch === undefined) {
         batch = { downloaded: 0, failed: 0 };
-        send(
+        mailer.send(
           `START activity on camera ${config.host}`,
           `Recording(s) are being downloaded.`,
         );
@@ -111,7 +79,7 @@ function createSesNotifier(config: NotifyConfig): Notifier {
         sendSummary();
       }
 
-      await delivery;
+      await mailer.flush();
     },
   };
 }

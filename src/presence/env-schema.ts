@@ -1,4 +1,8 @@
-import { deviceEnvSchema, type EnvField } from "../shared/env-schema.ts";
+import {
+  deviceEnvSchema,
+  type EnvField,
+  notifyEnvSchema,
+} from "../shared/env-schema.ts";
 
 // A single sighting proves someone is home, but BLE advertisements are easy to
 // miss, so absence has to be confirmed by several scans in a row.
@@ -22,6 +26,7 @@ function validateAddresses(value: string): string | undefined {
 
 export const envSchema: EnvField[] = [
   ...deviceEnvSchema,
+  ...notifyEnvSchema,
   {
     name: "PRESENCE_DEVICES",
     description:

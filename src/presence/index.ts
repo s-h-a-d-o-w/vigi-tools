@@ -9,6 +9,7 @@ import {
 import { anyDevicePresent } from "./ble.ts";
 import { loadConfig } from "./config.ts";
 import { REQUIRED_ABSENT_SCANS } from "./env-schema.ts";
+import { createBatteryWarner } from "./notify.ts";
 
 const config = loadConfig();
 const controlApi: ControlApiOptions = {
@@ -16,6 +17,7 @@ const controlApi: ControlApiOptions = {
   port: config.apiPort,
   rejectUnauthorized: config.rejectUnauthorized,
 };
+const batteryWarner = createBatteryWarner(config.batteryWarning);
 
 // Undefined until the first successful switch, so the initial state is always
 // written to the device rather than assumed.
@@ -39,14 +41,22 @@ async function check(): Promise<void> {
   );
 
   const shouldDetect = absentScans >= REQUIRED_ABSENT_SCANS;
-  if (shouldDetect === appliedState) {
-    return;
+  if (shouldDetect !== appliedState) {
+    const stok = await authenticate(
+      controlApi,
+      config.username,
+      config.password,
+    );
+    await setMotionDetectionSwitch(controlApi, stok, shouldDetect);
+    appliedState = shouldDetect;
+    log(`  motion detection turned ${appliedState ? "on" : "off"}`);
   }
 
-  const stok = await authenticate(controlApi, config.username, config.password);
-  await setMotionDetectionSwitch(controlApi, stok, shouldDetect);
-  appliedState = shouldDetect;
-  log(`  motion detection turned ${appliedState ? "on" : "off"}`);
+  // Only a device that is nearby advertises its battery, and the motion
+  // detection state matters more than the battery, so this comes last.
+  if (presentDevice !== undefined) {
+    await batteryWarner.check(presentDevice);
+  }
 }
 
 // The scan inside `check` already lasts a full interval, so no extra wait.
