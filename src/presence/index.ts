@@ -8,6 +8,7 @@ import {
 
 import { anyDevicePresent } from "./ble.ts";
 import { loadConfig } from "./config.ts";
+import { REQUIRED_ABSENT_SCANS } from "./env-schema.ts";
 
 const config = loadConfig();
 const controlApi: ControlApiOptions = {
@@ -15,10 +16,6 @@ const controlApi: ControlApiOptions = {
   port: config.apiPort,
   rejectUnauthorized: config.rejectUnauthorized,
 };
-
-// A single sighting proves someone is home, but BLE advertisements are easy to
-// miss, so absence has to be confirmed by several scans in a row.
-const REQUIRED_ABSENT_SCANS = 4;
 
 // Undefined until the first successful switch, so the initial state is always
 // written to the device rather than assumed.
@@ -33,6 +30,7 @@ async function check(): Promise<void> {
 
   absentScans = presentDevice === undefined ? absentScans + 1 : 0;
   if (absentScans > 0 && absentScans < REQUIRED_ABSENT_SCANS) {
+    log(`  ${absentScans}/${REQUIRED_ABSENT_SCANS} absent scans`);
     return;
   }
 

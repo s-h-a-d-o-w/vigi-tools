@@ -10,4 +10,4 @@ Problem: Daemon might restart, or the adapter might be reset, then `bluetoothctl
 
 ## Using noble
 
-Uses 2x CPU compared to bluetoothctl.
+Uses 2x CPU compared to bluetoothctl. (8% instead of 4% on a Raspberry Pi 400.)

@@ -1,5 +1,9 @@
 import { deviceEnvSchema, type EnvField } from "../shared/env-schema.ts";
 
+// A single sighting proves someone is home, but BLE advertisements are easy to
+// miss, so absence has to be confirmed by several scans in a row.
+export const REQUIRED_ABSENT_SCANS = 4;
+
 // Six colon-separated hex pairs. Rejects anything that could be mistaken for a
 // bluetoothctl option or a shell token.
 const ADDRESS_PATTERN = /^[\da-f]{2}(?::[\da-f]{2}){5}$/iu;
@@ -26,7 +30,7 @@ export const envSchema: EnvField[] = [
   },
   {
     name: "CHECK_INTERVAL_SECONDS",
-    description: "How long each Bluetooth LE scan runs (seconds).",
-    default: "4",
+    description: `Your device appears within this interval => you're home. It doesn't for ${REQUIRED_ABSENT_SCANS} consecutive intervals => you're away. (Seconds.)`,
+    default: "6",
   },
 ];
