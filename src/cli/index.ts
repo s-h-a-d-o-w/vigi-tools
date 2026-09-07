@@ -19,7 +19,7 @@ ${toolEntries}
 
 Commands:
   (none)      run the tool in the foreground
-  configure   write .env.<tool> in the current directory
+  configure   write .env.shared and .env.<tool> in the current directory
   install     run the tool as a systemd service (asks for sudo)
   uninstall   stop and remove that service (asks for sudo)`;
 }

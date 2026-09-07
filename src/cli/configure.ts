@@ -12,7 +12,7 @@ import {
   text,
 } from "@clack/prompts";
 
-import type { EnvField } from "../shared/env-schema.ts";
+import { type EnvField, isSharedEnvField } from "../shared/env-schema.ts";
 
 import { envFilePath } from "./env-file.ts";
 import { tools, type ToolName } from "./tools.ts";
@@ -84,16 +84,27 @@ function isAnswered(answers: NodeJS.Dict<string>, name: string): boolean {
   return answer !== undefined && answer !== "";
 }
 
+async function writeEnvFile(file: string, inputs: string[]): Promise<void> {
+  await writeFile(file, `${inputs.join("\n\n")}\n`, { mode: 0o600 });
+  await chmod(file, 0o600);
+}
+
 export async function configure(tool: ToolName): Promise<void> {
-  const file = envFilePath(tool);
-  const existing = await readExisting(file);
+  const sharedFile = envFilePath("shared");
+  const toolFile = envFilePath(tool);
+  const existing = {
+    ...(await readExisting(sharedFile)),
+    ...(await readExisting(toolFile)),
+  };
 
-  intro(`Creating .env.${tool}`);
+  intro(`Creating .env.shared and .env.${tool}`);
 
-  if (existsSync(file)) {
-    log.warn(
-      `${file} exists. Its values are filled in below and it will be overwritten.`,
-    );
+  for (const file of [sharedFile, toolFile]) {
+    if (existsSync(file)) {
+      log.warn(
+        `${file} exists. Its values are filled in below and it will be overwritten.`,
+      );
+    }
   }
 
   // Fields are asked in the order they can be answered in: required ones first,
@@ -102,10 +113,13 @@ export async function configure(tool: ToolName): Promise<void> {
   const fields = tools[tool].envSchema.toSorted(
     (a, b) => promptOrder(a) - promptOrder(b),
   );
-  const inputs: string[] = [];
+  const sharedInputs: string[] = [];
+  const toolInputs: string[] = [];
   const answers: NodeJS.Dict<string> = {};
 
   for (const field of fields) {
+    const inputs = isSharedEnvField(field.name) ? sharedInputs : toolInputs;
+
     // A masked prompt cannot be pre-filled, so an empty secret keeps what the file had.
     const current = existing[field.name];
     const keepable = field.secret === true ? current : undefined;
@@ -145,8 +159,8 @@ export async function configure(tool: ToolName): Promise<void> {
     inputs.push(renderField(field, resolved));
   }
 
-  await writeFile(file, `${inputs.join("\n\n")}\n`, { mode: 0o600 });
-  await chmod(file, 0o600);
+  await writeEnvFile(sharedFile, sharedInputs);
+  await writeEnvFile(toolFile, toolInputs);
 
   outro(`Wrote config. Run with: vigi-tools ${tool}`);
 }

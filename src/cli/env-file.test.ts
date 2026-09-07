@@ -40,16 +40,19 @@ describe("env file", () => {
   it("gives every tool its own file in the current directory", () => {
     expect(envFilePath("downloader")).toBe(path.join(CWD, ".env.downloader"));
     expect(envFilePath("presence")).toBe(path.join(CWD, ".env.presence"));
+    expect(envFilePath("shared")).toBe(path.join(CWD, ".env.shared"));
   });
 
-  it("loads the file of the tool that is starting", () => {
+  it("loads the file of the tool that is starting before the shared one", () => {
     mocks.existsSync.mockReturnValue(true);
 
     loadEnvFile("presence");
 
-    expect(loadEnvFileSpy).toHaveBeenCalledWith(
-      path.join(CWD, ".env.presence"),
-    );
+    // Node keeps what is already set, so the tool's own file has to come first.
+    expect(loadEnvFileSpy.mock.calls).toStrictEqual([
+      [path.join(CWD, ".env.presence")],
+      [path.join(CWD, ".env.shared")],
+    ]);
   });
 
   it("keeps the ambient environment when there is no file", () => {

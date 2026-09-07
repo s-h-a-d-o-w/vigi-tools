@@ -68,11 +68,13 @@ export function install(tool: ToolName): void {
   }
 
   const exec = cliPath();
-  const envFile = envFilePath(tool);
+  const missing = [envFilePath("shared"), envFilePath(tool)].find(
+    (file) => !existsSync(file),
+  );
 
-  if (!existsSync(envFile)) {
+  if (missing !== undefined) {
     throw new Error(
-      `Missing ${envFile} - run "vigi-tools ${tool} configure" here first`,
+      `Missing ${missing} - run "vigi-tools ${tool} configure" here first`,
     );
   }
 

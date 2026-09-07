@@ -43,7 +43,7 @@ export const deviceEnvSchema: EnvField[] = [
 ];
 
 /** What a tool needs to send mail through SES. Off until a recipient is set. */
-export const notifyEnvSchema: EnvField[] = [
+const notifyEnvSchema: EnvField[] = [
   {
     name: "NOTIFY_EMAIL_TO",
     description:
@@ -73,3 +73,16 @@ export const notifyEnvSchema: EnvField[] = [
     requires: "NOTIFY_EMAIL_TO",
   },
 ];
+
+/**
+ * Everything every tool understands the same way. These are configured once
+ * into `.env.shared` instead of being repeated per tool.
+ */
+export const sharedEnvSchema: EnvField[] = [
+  ...deviceEnvSchema,
+  ...notifyEnvSchema,
+];
+
+export function isSharedEnvField(name: string): boolean {
+  return sharedEnvSchema.some((field) => field.name === name);
+}

@@ -41,7 +41,9 @@ vi.mock(import("@clack/prompts"), () => ({
 }));
 
 const CWD = "/srv/vigi";
+const SHARED_FILE = path.join(CWD, ".env.shared");
 const FILE = path.join(CWD, ".env.presence");
+const DOWNLOADER_FILE = path.join(CWD, ".env.downloader");
 
 /** What is typed into the prompt of a field, keyed by variable name. */
 const ANSWERS: Record<string, string> = {
@@ -91,9 +93,11 @@ function optionsOf(
     .find(({ message }) => fieldOf(message) === field);
 }
 
-/** What `configure` handed to `writeFile`. */
-function written(): string {
-  return mocks.writeFile.mock.lastCall?.[1] ?? "";
+/** What `configure` handed to `writeFile` for one of the files. */
+function written(file: string = FILE): string {
+  return (
+    mocks.writeFile.mock.calls.find(([target]) => target === file)?.[1] ?? ""
+  );
 }
 
 describe(configure, () => {
@@ -113,19 +117,33 @@ describe(configure, () => {
     expect(mocks.writeFile).toHaveBeenCalledWith(FILE, expect.any(String), {
       mode: 0o600,
     });
-    expect(written()).toContain(
+    expect(written(SHARED_FILE)).toContain(
       "# Hostname or IP address of the camera\nVIGI_HOST=camera.example",
     );
     expect(written()).toContain("PRESENCE_DEVICES=phone, tablet");
-    expect(written()).toContain(
+    expect(written(SHARED_FILE)).toContain(
       "# Camera account to log in as\n# USERNAME=admin",
     );
     expect(written().endsWith("\n")).toBe(true);
   });
 
+  it("keeps the settings every tool shares in one file", async () => {
+    await configure("presence");
+
+    expect(mocks.writeFile).toHaveBeenCalledWith(
+      SHARED_FILE,
+      expect.any(String),
+      { mode: 0o600 },
+    );
+    expect(written(SHARED_FILE)).not.toContain("PRESENCE_DEVICES");
+    expect(written()).not.toContain("VIGI_HOST");
+    expect(written()).not.toContain("NOTIFY_EMAIL_TO");
+  });
+
   it("keeps the file readable by its owner only", async () => {
     await configure("presence");
 
+    expect(mocks.chmod).toHaveBeenCalledWith(SHARED_FILE, 0o600);
     expect(mocks.chmod).toHaveBeenCalledWith(FILE, 0o600);
   });
 
@@ -137,7 +155,7 @@ describe(configure, () => {
     expect(optionsOf(mocks.text, "API_PORT")).toMatchObject({
       placeholder: "20443",
     });
-    expect(written()).toContain("VIGI_HOST=camera.example\n");
+    expect(written(SHARED_FILE)).toContain("VIGI_HOST=camera.example\n");
   });
 
   it("masks secrets instead of asking for them in the clear", async () => {
@@ -145,7 +163,7 @@ describe(configure, () => {
 
     expect(optionsOf(mocks.password, "PASSWORD")).toMatchObject({ mask: "*" });
     expect(optionsOf(mocks.text, "PASSWORD")).toBeUndefined();
-    expect(written()).toContain("PASSWORD='hunter2'");
+    expect(written(SHARED_FILE)).toContain("PASSWORD='hunter2'");
   });
 
   it("quotes a secret with a quote character it does not contain", async () => {
@@ -153,7 +171,7 @@ describe(configure, () => {
 
     await configure("presence");
 
-    expect(written()).toContain('PASSWORD="it\'s #1"');
+    expect(written(SHARED_FILE)).toContain('PASSWORD="it\'s #1"');
   });
 
   it("rejects an empty answer where nothing can fill in", async () => {
@@ -178,8 +196,8 @@ describe(configure, () => {
     expect(optionsOf(mocks.text, "VIGI_HOST")).toMatchObject({
       initialValue: "old.example",
     });
-    expect(written()).toContain("VIGI_HOST=old.example\n");
-    expect(written()).toContain("USERNAME=ops\n");
+    expect(written(SHARED_FILE)).toContain("VIGI_HOST=old.example\n");
+    expect(written(SHARED_FILE)).toContain("USERNAME=ops\n");
   });
 
   it("comments out a pre-filled optional value that is cleared", async () => {
@@ -189,7 +207,7 @@ describe(configure, () => {
 
     await configure("presence");
 
-    expect(written()).toContain("# USERNAME=admin");
+    expect(written(SHARED_FILE)).toContain("# USERNAME=admin");
   });
 
   it("keeps the secret on file when its prompt is left empty", async () => {
@@ -202,7 +220,7 @@ describe(configure, () => {
     const options = optionsOf(mocks.password, "PASSWORD");
     expect(options?.message).toContain("keep the current one");
     expect(options?.validate).toBeUndefined();
-    expect(written()).toContain("PASSWORD='old-secret'\n");
+    expect(written(SHARED_FILE)).toContain("PASSWORD='old-secret'\n");
   });
 
   it("writes nothing when a prompt is cancelled", async () => {
@@ -221,8 +239,10 @@ describe(configure, () => {
 
     expect(optionsOf(mocks.text, "AWS_REGION")).toBeUndefined();
     expect(optionsOf(mocks.password, "AWS_SECRET_ACCESS_KEY")).toBeUndefined();
-    expect(written()).toContain("# AWS_REGION=\n");
-    expect(written()).toContain("# NOTIFY_QUIET_PERIOD_SECONDS=120");
+    expect(written(SHARED_FILE)).toContain("# AWS_REGION=\n");
+    expect(written(DOWNLOADER_FILE)).toContain(
+      "# NOTIFY_QUIET_PERIOD_SECONDS=120",
+    );
   });
 
   it("asks for the dependent fields once the one they need has a value", async () => {
@@ -240,8 +260,8 @@ describe(configure, () => {
     expect(optionsOf(mocks.text, "AWS_REGION")?.validate).toBeTypeOf(
       "function",
     );
-    expect(written()).toContain("NOTIFY_EMAIL_TO=owner@example.com");
-    expect(written()).toContain("AWS_REGION=eu-central-1");
-    expect(written()).toContain("AWS_SECRET_ACCESS_KEY='s3cret'");
+    expect(written(SHARED_FILE)).toContain("NOTIFY_EMAIL_TO=owner@example.com");
+    expect(written(SHARED_FILE)).toContain("AWS_REGION=eu-central-1");
+    expect(written(SHARED_FILE)).toContain("AWS_SECRET_ACCESS_KEY='s3cret'");
   });
 });

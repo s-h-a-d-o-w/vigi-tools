@@ -1,12 +1,7 @@
-import {
-  deviceEnvSchema,
-  type EnvField,
-  notifyEnvSchema,
-} from "../shared/env-schema.ts";
+import { type EnvField, sharedEnvSchema } from "../shared/env-schema.ts";
 
 export const envSchema: EnvField[] = [
-  ...deviceEnvSchema,
-  ...notifyEnvSchema,
+  ...sharedEnvSchema,
   {
     name: "TARGET_DIR",
     description: "Absolute path of the directory recordings are synced into",
