@@ -8,7 +8,7 @@ const HOUR_MS = 3_600_000;
 
 const CONFIG: BatteryWarningConfig = {
   accessKeyId: "AKIAEXAMPLE",
-  checkIntervalMs: 12 * HOUR_MS,
+  batteryCheckInterval: 12 * HOUR_MS,
   recipient: "owner@example.com",
   region: "eu-central-1",
   secretAccessKey: "s3cret",
@@ -81,7 +81,7 @@ describe(createBatteryWarner, () => {
 
     expect(mocks.log).toHaveBeenCalledWith(`  ${PHONE} battery is low!`);
     expect(subject(1)).toBe(`Low battery on presence device ${PHONE}`);
-    expect(mocks.send.mock.calls[0]?.[1]).toContain("flagged as low");
+    expect(mocks.send.mock.calls[0]?.[1]).toContain("flagged as being low");
   });
 
   it("only reads the battery once per interval", async () => {
@@ -89,7 +89,7 @@ describe(createBatteryWarner, () => {
     const warner = createBatteryWarner(CONFIG);
 
     await warner.check(PHONE);
-    vi.advanceTimersByTime(CONFIG.checkIntervalMs - 1);
+    vi.advanceTimersByTime(CONFIG.batteryCheckInterval - 1);
     await warner.check(PHONE);
 
     expect(mocks.isBatteryLow).toHaveBeenCalledOnce();
@@ -105,7 +105,7 @@ describe(createBatteryWarner, () => {
     const warner = createBatteryWarner(CONFIG);
 
     await warner.check(PHONE);
-    vi.advanceTimersByTime(CONFIG.checkIntervalMs);
+    vi.advanceTimersByTime(CONFIG.batteryCheckInterval);
     await warner.check(PHONE);
 
     expect(mocks.send).toHaveBeenCalledOnce();
@@ -117,10 +117,10 @@ describe(createBatteryWarner, () => {
 
     await warner.check(PHONE);
     reports(false);
-    vi.advanceTimersByTime(CONFIG.checkIntervalMs);
+    vi.advanceTimersByTime(CONFIG.batteryCheckInterval);
     await warner.check(PHONE);
     reports(true);
-    vi.advanceTimersByTime(CONFIG.checkIntervalMs);
+    vi.advanceTimersByTime(CONFIG.batteryCheckInterval);
     await warner.check(PHONE);
 
     expect(mocks.send).toHaveBeenCalledTimes(2);

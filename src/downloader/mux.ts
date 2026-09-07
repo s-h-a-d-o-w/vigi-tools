@@ -68,7 +68,7 @@ export async function muxToMp4(
 
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
-      stderr = `${stderr}${chunk}`.slice(-4000);
+      stderr = `${stderr}${chunk}`.slice(-4_000);
     });
 
     child.on("error", reject);

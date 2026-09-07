@@ -37,7 +37,7 @@ const STREAMS: DownloadResult = {
   av: {
     videoCodec: "H264",
     audioCodec: "G711alaw",
-    audioSampleRate: 8000,
+    audioSampleRate: 8_000,
     audioChannels: 1,
   },
 };

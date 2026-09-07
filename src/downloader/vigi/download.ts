@@ -101,7 +101,7 @@ function parseAvConfig(response: Record<string, unknown>): AvConfig {
     audioCodec: asText(first["audio_codec"]),
     // The device reports kHz (e.g. "8") while ffmpeg expects Hz.
     audioSampleRate:
-      rawSampleRate < 1000 ? rawSampleRate * 1000 : rawSampleRate,
+      rawSampleRate < 1_000 ? rawSampleRate * 1_000 : rawSampleRate,
     audioChannels: Number(first["audio_channels"] ?? 1),
   };
 }

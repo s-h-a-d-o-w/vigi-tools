@@ -30,21 +30,21 @@
     "dist"
   ],
   "dependencies": {
-    "@aws-sdk/client-sesv2": "^3.1108.0",
+    "@aws-sdk/client-sesv2": "^3.1127.0",
     "@clack/prompts": "^1.7.0"
   },
   "devDependencies": {
-    "@s-h-a-d-o-w/oxlint-config": "^1.2.4",
-    "@types/node": "^24.0.0",
+    "@s-h-a-d-o-w/oxlint-config": "^1.4.0",
+    "@types/node": "^24.13.3",
     "cross-env": "^10.1.0",
     "husky": "^9.1.7",
     "knip": "^6.34.0",
-    "lint-staged": "^17.0.8",
+    "lint-staged": "^17.5.0",
     "oxfmt": "^0.58.0",
-    "oxlint": "^1.76.0",
+    "oxlint": "^1.81.0",
     "oxlint-tsgolint": "^7.0.2001",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   },
   "keywords": [
     "vigi",
@@ -53,5 +53,5 @@
     "rtsp",
     "motion-detection"
   ],
-  "packageManager": "pnpm@11.21.0+sha512.521705bce689924eac72f5a3587122f362689ef6571e55ba80076fd637c11132ecffada26fad4ea79c485bfddbfd3d5a2a5b05805a77e893de71ec8a6cca3bb1"
+  "packageManager": "pnpm@12.3.4+sha512.961aa41fb077da3a04a441d9f8e15ebc0c96da8ef710b2eb67bf9ee7cb0610eabd48f1fd85f51cffe73846785fa0f87c56a3a872a1d893f8446741b5cce45457"
 }

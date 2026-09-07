@@ -32,7 +32,7 @@ function createSesWarner(config: BatteryWarningConfig): BatteryWarner {
 
     if (
       previous !== undefined &&
-      Date.now() - previous < config.checkIntervalMs
+      Date.now() - previous < config.batteryCheckInterval
     ) {
       return;
     }
@@ -59,8 +59,9 @@ function createSesWarner(config: BatteryWarningConfig): BatteryWarner {
     warned.add(address);
     mailer.send(
       `Low battery on presence device ${address}`,
-      `The battery of ${address} is flagged as low by the device itself.`,
+      `The battery of ${address} got flagged as being low.`,
     );
+    log(`  Sent email notification for ${address}.`);
   }
 
   return {

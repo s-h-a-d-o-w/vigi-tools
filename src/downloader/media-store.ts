@@ -9,7 +9,7 @@ import type { MediaEntry } from "../shared/types.ts";
  * later listing reports a larger size for the same entry. Sizes within this
  * margin are treated as the same recording.
  */
-const SIZE_TOLERANCE_BYTES = 8 * 1024;
+const SIZE_TOLERANCE_BYTES = 8 * 1_024;
 
 /** Device-provided strings end up in file names, so anything path-ish is stripped. */
 export function sanitizeSegment(value: string): string {
@@ -30,7 +30,7 @@ function localTimestamp(date: Date): string {
 }
 
 function timestampLabel(secondsSinceEpoch: number): string {
-  return localTimestamp(new Date(secondsSinceEpoch * 1000))
+  return localTimestamp(new Date(secondsSinceEpoch * 1_000))
     .replaceAll(":", "-")
     .replace("T", "_");
 }

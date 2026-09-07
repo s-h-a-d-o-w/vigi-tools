@@ -1,6 +1,6 @@
 import { bluetoothctl } from "./bluetoothctl.ts";
 
-const INFO_TIMEOUT_MS = 5000;
+const INFO_TIMEOUT_MS = 5_000;
 
 // Beacons of the "EYE" family put their readings into the manufacturer data.
 // BlueZ prints the company ID separately from the payload and dumps the

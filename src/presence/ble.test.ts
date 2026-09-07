@@ -13,7 +13,7 @@ type ExecFile = (
 
 const PHONE = "AA:BB:CC:DD:EE:FF";
 const TABLET = "11:22:33:44:55:66";
-const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
+const MAX_OUTPUT_BYTES = 8 * 1_024 * 1_024;
 
 const mocks = vi.hoisted(() => ({
   execFile: vi.fn<ExecFile>(),
@@ -112,7 +112,7 @@ describe(anyDevicePresent, () => {
     expect(mocks.execFile).toHaveBeenCalledWith(
       "bluetoothctl",
       ["--timeout", "1", "scan", "le"],
-      { timeout: 6000, maxBuffer: MAX_OUTPUT_BYTES },
+      { timeout: 6_000, maxBuffer: MAX_OUTPUT_BYTES },
       expect.any(Function),
     );
   });

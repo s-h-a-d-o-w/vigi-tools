@@ -167,7 +167,7 @@ describe("media store", () => {
       await markDownloadStarted(directory, ENTRY);
 
       expect(
-        hasLocalCopy(directory, { ...ENTRY, size: ENTRY.size + 8 * 1024 }),
+        hasLocalCopy(directory, { ...ENTRY, size: ENTRY.size + 8 * 1_024 }),
       ).toBe(true);
     });
 
@@ -175,7 +175,7 @@ describe("media store", () => {
       await markDownloadStarted(directory, ENTRY);
 
       expect(
-        hasLocalCopy(directory, { ...ENTRY, size: ENTRY.size + 8193 }),
+        hasLocalCopy(directory, { ...ENTRY, size: ENTRY.size + 8_193 }),
       ).not.toBe(true);
     });
 

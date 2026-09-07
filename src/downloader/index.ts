@@ -61,8 +61,8 @@ async function check(): Promise<void> {
 
   const stok = await authenticate(controlApi, config.username, config.password);
 
-  const endTime = Math.floor(Date.now() / 1000); // Seconds since the epoch.
-  const startTime = endTime - Math.round(config.checkPreviousHours * 3600);
+  const endTime = Math.floor(Date.now() / 1_000); // Seconds since the epoch.
+  const startTime = endTime - Math.round(config.checkPreviousHours * 3_600);
   const entries = await getMediaList(controlApi, stok, {
     startTime,
     endTime,

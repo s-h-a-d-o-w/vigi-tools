@@ -49,7 +49,7 @@ describe("systemd service", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.spyOn(process, "cwd").mockReturnValue(CWD);
-    vi.spyOn(process, "getuid").mockReturnValue(1000);
+    vi.spyOn(process, "getuid").mockReturnValue(1_000);
     vi.spyOn(console, "log").mockReturnValue(undefined);
 
     mocks.existsSync.mockReturnValue(true);

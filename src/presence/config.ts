@@ -5,10 +5,10 @@ import type { SesConfig } from "../shared/ses.ts";
 import { envSchema } from "./env-schema.ts";
 
 /** How often a nearby device's low battery indication is read. */
-const BATTERY_CHECK_INTERVAL_MS = 12 * 3_600_000;
+const BATTERY_CHECK_INTERVAL = 12 * 3_600_000;
 
 export type BatteryWarningConfig = SesConfig & {
-  checkIntervalMs: number;
+  batteryCheckInterval: number;
 };
 
 /** Battery warnings stay off until a recipient is configured. */
@@ -23,7 +23,7 @@ function loadBatteryWarningConfig(
 
   return {
     ...ses,
-    checkIntervalMs: BATTERY_CHECK_INTERVAL_MS,
+    batteryCheckInterval: BATTERY_CHECK_INTERVAL,
   };
 }
 

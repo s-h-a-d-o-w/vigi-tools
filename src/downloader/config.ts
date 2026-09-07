@@ -27,7 +27,7 @@ function loadNotifyConfig(host: string): NotifyConfig | undefined {
   return {
     ...ses,
     host,
-    quietPeriodMs: env.number("NOTIFY_QUIET_PERIOD_SECONDS") * 1000,
+    quietPeriodMs: env.number("NOTIFY_QUIET_PERIOD_SECONDS") * 1_000,
   };
 }
 
@@ -39,7 +39,7 @@ export function loadConfig() {
     rtspPort: env.number("RTSP_PORT"),
     targetDir: path.resolve(process.cwd(), env.string("TARGET_DIR")),
     checkPreviousHours: env.number("CHECK_PREVIOUS_HOURS"),
-    checkIntervalMs: env.number("CHECK_INTERVAL_SECONDS") * 1000,
+    checkIntervalMs: env.number("CHECK_INTERVAL_SECONDS") * 1_000,
     notifications: loadNotifyConfig(device.host),
   };
 }

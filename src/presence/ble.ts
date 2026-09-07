@@ -9,7 +9,7 @@ function scan(scanSeconds: number): Promise<string> {
     ["--timeout", String(seconds), "scan", "le"],
     // bluetoothctl needs a moment to wind the scan down before the kill timeout
     // applies.
-    (seconds + 5) * 1000,
+    (seconds + 5) * 1_000,
   );
 }
 

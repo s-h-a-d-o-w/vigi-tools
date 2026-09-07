@@ -10,7 +10,7 @@ const DEVICE_PREFIX = "Device ";
 async function bluetoothctl(args: readonly string[]): Promise<string> {
   try {
     const { stdout } = await execFileAsync("bluetoothctl", [...args], {
-      timeout: (SCAN_SECONDS + 5) * 1000,
+      timeout: (SCAN_SECONDS + 5) * 1_000,
     });
 
     return stdout;

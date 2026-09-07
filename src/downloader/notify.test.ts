@@ -141,13 +141,13 @@ describe(createNotifier, () => {
 
     notifier.downloadsStarted();
     notifier.downloadsFinished({ downloaded: 0, failed: 1 });
-    await vi.advanceTimersByTimeAsync(CONFIG.quietPeriodMs - 1000);
+    await vi.advanceTimersByTimeAsync(CONFIG.quietPeriodMs - 1_000);
 
     expect(mocks.createCommand).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({}),
     );
 
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(1_000);
 
     expect(subjectOf(sentMail(2))).toBe("STOP activity on camera camera.local");
     expect(bodyOf(sentMail(2))).toBe("2 recording(s) downloaded, 1 failed.");

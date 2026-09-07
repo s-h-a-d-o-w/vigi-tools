@@ -121,7 +121,7 @@ function streamsFor(entry: MediaEntry): DownloadResult {
     av: {
       videoCodec: "H264",
       audioCodec: "G711alaw",
-      audioSampleRate: 8000,
+      audioSampleRate: 8_000,
       audioChannels: 1,
     },
   };
@@ -191,7 +191,7 @@ describe("downloader service", () => {
       PASSWORD,
     );
     expect(mocks.getMediaList).toHaveBeenCalledWith(CONTROL_API, "stok-1", {
-      startTime: 1_700_000_600 - 2 * 3600,
+      startTime: 1_700_000_600 - 2 * 3_600,
       endTime: 1_700_000_600,
       eventTypes: EVENT_TYPES,
     });
@@ -260,7 +260,7 @@ describe("downloader service", () => {
 
     expect(mocks.downloadMedia).toHaveBeenCalledWith({
       host: CONTROL_API.host,
-      port: 1554,
+      port: 1_554,
       username: USERNAME,
       password: PASSWORD,
       entry: ENTRY_ONE,
