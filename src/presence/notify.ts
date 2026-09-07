@@ -46,13 +46,12 @@ function createSesWarner(config: BatteryWarningConfig): BatteryWarner {
       return;
     }
 
-    log(`  ${address} battery ${low ? "low" : "fine"}`);
-
     if (!low) {
       warned.delete(address);
       return;
     }
 
+    log(`  ${address} battery is low!`);
     if (warned.has(address)) {
       return;
     }

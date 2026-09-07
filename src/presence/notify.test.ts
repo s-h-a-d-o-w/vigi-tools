@@ -70,7 +70,7 @@ describe(createBatteryWarner, () => {
 
     await createBatteryWarner(CONFIG).check(PHONE);
 
-    expect(mocks.log).toHaveBeenCalledWith(`  ${PHONE} battery fine`);
+    expect(mocks.log).not.toHaveBeenCalled();
     expect(mocks.send).not.toHaveBeenCalled();
   });
 
@@ -79,7 +79,7 @@ describe(createBatteryWarner, () => {
 
     await createBatteryWarner(CONFIG).check(PHONE);
 
-    expect(mocks.log).toHaveBeenCalledWith(`  ${PHONE} battery low`);
+    expect(mocks.log).toHaveBeenCalledWith(`  ${PHONE} battery is low!`);
     expect(subject(1)).toBe(`Low battery on presence device ${PHONE}`);
     expect(mocks.send.mock.calls[0]?.[1]).toContain("flagged as low");
   });

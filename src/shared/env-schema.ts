@@ -47,12 +47,12 @@ export const notifyEnvSchema: EnvField[] = [
   {
     name: "NOTIFY_EMAIL_TO",
     description:
-      "E-mail address to send notifications to (requires AWS keys and an SES-verified address!)",
+      "E-mail address to send notifications to (Also requires AWS keys and an SES-verified sender address!)",
     default: "",
   },
   {
     name: "NOTIFY_EMAIL_FROM",
-    description: "SES-verified address the notifications are sent from",
+    description: "SES-verified address that e-mail notifications are sent from",
     requires: "NOTIFY_EMAIL_TO",
   },
   {
