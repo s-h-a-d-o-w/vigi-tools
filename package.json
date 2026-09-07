@@ -1,6 +1,6 @@
 {
   "name": "vigi-tools",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "CLI tools for TP-Link VIGI cameras: sync recordings and switch motion detection by device presence",
   "homepage": "https://github.com/s-h-a-d-o-w/vigi-tools#readme",
   "repository": {
