@@ -4,7 +4,7 @@ const INFO_TIMEOUT_MS = 5_000;
 
 // Beacons of the "EYE" family put their readings into the manufacturer data.
 // BlueZ prints the company ID separately from the payload and dumps the
-// payload as hex plus an ASCII column:
+// payload as hex plus an ASCII column, e.g.:
 //   ManufacturerData.Key: 0x089a (2202)
 //   ManufacturerData.Value:
 //     01 84 6c                                         ..l
@@ -23,14 +23,10 @@ const EYE_VERSION = 0x01;
 // battery voltage that may follow.
 const EYE_LOW_BATTERY_FLAG = 0b0100_0000;
 
-/**
- * Whether the bit `flag` stands for is set in `flags`.
- *
- * Dividing by the flag moves its bit into the ones place, which the linter
- * likes better than a bitwise and.
- */
+/** Whether the bit `flag` stands for is set in `flags`. */
 function hasFlag(flags: number, flag: number): boolean {
-  return Math.trunc(flags / flag) % 2 === 1;
+  // oxlint-disable-next-line no-bitwise
+  return (flags & flag) !== 0;
 }
 
 /** The company ID and payload of the manufacturer data in an `info` dump. */

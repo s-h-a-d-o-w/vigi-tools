@@ -32,16 +32,17 @@ export function stubDeviceEnv(overrides: Record<string, string> = {}): void {
 /**
  * Services hand their check to `runForever` while their entry point is being
  * imported, so booting one means importing it again with a fresh module
- * registry.
+ * registry. `nth` picks the check of a service that runs more than one loop.
  */
 export async function bootService(
   runForeverMock: RunForeverMock,
   importEntryPoint: () => Promise<unknown>,
+  nth = 1,
 ): Promise<() => Promise<void>> {
   vi.resetModules();
   await importEntryPoint();
 
-  const check = runForeverMock.mock.lastCall?.[1];
+  const check = runForeverMock.mock.calls[nth - 1]?.[1];
   if (check === undefined) {
     throw new Error("the service never started its check loop");
   }

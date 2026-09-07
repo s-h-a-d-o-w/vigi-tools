@@ -1,16 +1,15 @@
 import { log, logError } from "../shared/log.ts";
-import { createMailer } from "../shared/ses.ts";
+import { createMailer, type SesConfig } from "../shared/ses.ts";
 
 import { isBatteryLow } from "./battery.ts";
-import type { BatteryWarningConfig } from "./config.ts";
 
 export type BatteryWarner = {
   /**
-   * Reads the battery of the device that is currently nearby, unless it has
-   * been read recently. Never rejects: a battery that cannot be read is worth
-   * a log line, not the end of the service.
+   * Reads the battery of every device, skipping the ones that are out of range
+   * or do not advertise an indication. Never rejects: a battery that cannot be
+   * read is worth a log line, not the end of the service.
    */
-  check: (address: string) => Promise<void>;
+  check: (addresses: readonly string[]) => Promise<void>;
 };
 
 const DISABLED_WARNER: BatteryWarner = {
@@ -19,26 +18,14 @@ const DISABLED_WARNER: BatteryWarner = {
 
 // Narrowing the optional configuration does not survive into the callback
 // below, so the configured case gets its own non-optional parameter.
-function createSesWarner(config: BatteryWarningConfig): BatteryWarner {
+function createSesWarner(config: SesConfig): BatteryWarner {
   const mailer = createMailer(config);
-  const lastCheck = new Map<string, number>();
 
   // A device stays on this list until its battery recovers, so a replaced
   // battery arms the warning again while a low one only warns once.
   const warned = new Set<string>();
 
   async function check(address: string): Promise<void> {
-    const previous = lastCheck.get(address);
-
-    if (
-      previous !== undefined &&
-      Date.now() - previous < config.batteryCheckInterval
-    ) {
-      return;
-    }
-
-    lastCheck.set(address, Date.now());
-
     const low = await isBatteryLow(address);
 
     if (low === undefined) {
@@ -65,20 +52,24 @@ function createSesWarner(config: BatteryWarningConfig): BatteryWarner {
   }
 
   return {
-    check: async (address) => {
-      try {
-        await check(address);
-      } catch (error) {
-        logError(
-          `  battery check for ${address} failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+    check: async (addresses) => {
+      // bluetoothctl is a single shared resource, so the devices are read one
+      // after the other rather than all at once.
+      for (const address of addresses) {
+        try {
+          await check(address);
+        } catch (error) {
+          logError(
+            `  battery check for ${address} failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
       }
     },
   };
 }
 
 export function createBatteryWarner(
-  config: BatteryWarningConfig | undefined,
+  config: SesConfig | undefined,
 ): BatteryWarner {
   return config === undefined ? DISABLED_WARNER : createSesWarner(config);
 }

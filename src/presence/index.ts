@@ -51,13 +51,16 @@ async function check(): Promise<void> {
     appliedState = shouldDetect;
     log(`  motion detection turned ${appliedState ? "on" : "off"}`);
   }
-
-  // Only a device that is nearby advertises its battery, and the motion
-  // detection state matters more than the battery, so this comes last.
-  if (presentDevice !== undefined) {
-    await batteryWarner.check(presentDevice);
-  }
 }
 
-// The scan inside `check` already lasts a full interval, so no extra wait.
-await runForever(0, check);
+async function checkBatteries(): Promise<void> {
+  await batteryWarner.check(config.devices);
+}
+
+// The scan inside `check` already lasts a full interval, so no extra wait. The
+// batteries are read on their own, much slower schedule, because they outlive
+// any number of presence scans.
+await Promise.all([
+  runForever(0, check),
+  runForever(config.batteryCheckInterval, checkBatteries),
+]);
