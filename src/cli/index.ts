@@ -1,11 +1,28 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import process from "node:process";
 
 import { configure } from "./configure.ts";
 import { loadEnvFile } from "./env-file.ts";
 import { install, uninstall } from "./service.ts";
 import { isToolName, tools, type ToolName } from "./tools.ts";
+
+/** Works both from `src/cli` and from the built `dist/cli`. */
+function version(): string {
+  const packageJsonPath = path.join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "package.json",
+  );
+  const packageJson: unknown = JSON.parse(
+    readFileSync(packageJsonPath, "utf8"),
+  );
+
+  return (packageJson as { version: string }).version;
+}
 
 function usage(): string {
   const toolEntries = Object.entries(tools)
@@ -21,7 +38,11 @@ Commands:
   (none)      run the tool in the foreground
   configure   write .env.shared and .env.<tool> in the current directory
   install     run the tool as a systemd service (asks for sudo)
-  uninstall   stop and remove that service (asks for sudo)`;
+  uninstall   stop and remove that service (asks for sudo)
+
+Options:
+  -h, --help     show this help
+  -v, --version  show the version`;
 }
 
 async function runTool(tool: ToolName): Promise<void> {
@@ -32,6 +53,11 @@ async function runTool(tool: ToolName): Promise<void> {
 
 async function main(): Promise<void> {
   const [tool, command] = process.argv.slice(2);
+
+  if (tool === "--version" || tool === "-v") {
+    console.log(version());
+    return;
+  }
 
   if (tool === undefined || tool === "--help" || tool === "-h") {
     console.log(usage());

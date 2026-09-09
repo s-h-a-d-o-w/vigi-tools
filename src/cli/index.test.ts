@@ -65,6 +65,18 @@ describe("cli", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  it("prints the version on request", async () => {
+    for (const args of [["--version"], ["-v"]]) {
+      vi.mocked(console.log).mockClear();
+
+      await run(...args);
+
+      expect(printed()).toMatch(/^\d+\.\d+\.\d+/u);
+    }
+
+    expect(process.exitCode).toBeUndefined();
+  });
+
   it("loads the environment of a tool before starting it", async () => {
     // The tool bundle only exists next to the built CLI, so the import that
     // follows fails here - by then the environment has been loaded.
