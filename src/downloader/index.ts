@@ -1,4 +1,5 @@
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { log, logError } from "../shared/log.ts";
@@ -51,13 +52,10 @@ const controlApi = {
   port: config.apiPort,
   rejectUnauthorized: config.rejectUnauthorized,
 };
-const workDir = path.join(config.targetDir, ".work");
 const notifier = createNotifier(config.notifications);
 
 async function check(): Promise<void> {
   await mkdir(config.targetDir, { recursive: true });
-  await rm(workDir, { recursive: true, force: true });
-  await mkdir(workDir, { recursive: true });
 
   const stok = await authenticate(controlApi, config.username, config.password);
 
@@ -76,9 +74,11 @@ async function check(): Promise<void> {
     `${entries.length} recording(s) on the device, ${missing.length} missing from ${config.targetDir}`,
   );
 
-  if (missing.length > 0) {
-    notifier.downloadsStarted();
+  if (missing.length === 0) {
+    return;
   }
+
+  notifier.downloadsStarted();
 
   // Claim every entry up front so a concurrent run does not retry them.
   for (const entry of missing) {
@@ -86,34 +86,35 @@ async function check(): Promise<void> {
   }
 
   let failures = 0;
+  const workDir = await mkdtemp(path.join(tmpdir(), "vigi-downloader-"));
 
-  for (const entry of missing) {
-    const name = mediaFileName(entry);
-    log(
-      `Downloading ${name} (${(entry.size / 1_000_000).toFixed(1)} MB reported)`,
-    );
+  try {
+    for (const entry of missing) {
+      const name = mediaFileName(entry);
+      log(
+        `Downloading ${name} (${(entry.size / 1_000_000).toFixed(1)} MB reported)`,
+      );
 
-    try {
-      await fetchEntry(config, entry, workDir);
-      log(`  saved ${name}`);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      try {
+        await fetchEntry(config, entry, workDir);
+        log(`  saved ${name}`);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
 
-      failures += 1;
-      await markDownloadFailed(config.targetDir, entry, reason);
-      logError(`  failure: ${reason}`);
-      logError(`  failed entry: ${JSON.stringify(entry)}`);
+        failures += 1;
+        await markDownloadFailed(config.targetDir, entry, reason);
+        logError(`  failure: ${reason}`);
+        logError(`  failed entry: ${JSON.stringify(entry)}`);
+      }
     }
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
   }
 
-  await rm(workDir, { recursive: true, force: true });
-
-  if (missing.length > 0) {
-    notifier.downloadsFinished({
-      downloaded: missing.length - failures,
-      failed: failures,
-    });
-  }
+  notifier.downloadsFinished({
+    downloaded: missing.length - failures,
+    failed: failures,
+  });
 
   if (failures > 0) {
     // A failure stops the service, so the summary cannot wait for the quiet period.

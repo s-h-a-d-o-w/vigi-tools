@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { mkdir, rm } from "node:fs/promises";
+import type { mkdir, mkdtemp, rm } from "node:fs/promises";
 
 import {
   bootService,
@@ -53,6 +53,7 @@ const mocks = vi.hoisted(() => ({
     vi.fn<
       (target: string, options: { recursive: boolean }) => Promise<undefined>
     >(),
+  mkdtemp: vi.fn<(prefix: string) => Promise<string>>(),
   rm: vi.fn<typeof rm>(),
   runForever:
     vi.fn<(intervalMs: number, check: () => Promise<void>) => Promise<void>>(),
@@ -92,11 +93,16 @@ vi.mock(import("node:fs/promises"), async (importOriginal) => ({
   ...(await importOriginal()),
   // The real signature is overloaded, which a mock cannot mirror.
   mkdir: mocks.mkdir as unknown as typeof mkdir,
+  mkdtemp: mocks.mkdtemp as unknown as typeof mkdtemp,
   rm: mocks.rm,
+}));
+vi.mock(import("node:os"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  tmpdir: () => "/tmp",
 }));
 
 const TARGET_DIR = "/recordings";
-const WORK_DIR = "/recordings/.work";
+const WORK_DIR = "/tmp/vigi-downloader-abc123";
 
 const ENTRY_ONE: MediaEntry = {
   fileId: "file-1",
@@ -151,6 +157,7 @@ describe("downloader service", () => {
       (directory, entry) => `${directory}/${entry.fileId}.mp4`,
     );
     mocks.mkdir.mockResolvedValue(undefined);
+    mocks.mkdtemp.mockResolvedValue(WORK_DIR);
     mocks.rm.mockResolvedValue(undefined);
     mocks.runForever.mockResolvedValue(undefined);
     mocks.flush.mockResolvedValue(undefined);
@@ -197,22 +204,32 @@ describe("downloader service", () => {
     });
   });
 
-  it("recreates the work directory before and clears it after a run", async () => {
+  it("works in a fresh temporary directory and clears it after a run", async () => {
     const check = await startService();
 
     await check();
 
-    expect(mocks.mkdir).toHaveBeenNthCalledWith(1, TARGET_DIR, {
+    expect(mocks.mkdir).toHaveBeenCalledExactlyOnceWith(TARGET_DIR, {
       recursive: true,
     });
-    expect(mocks.mkdir).toHaveBeenNthCalledWith(2, WORK_DIR, {
-      recursive: true,
-    });
-    expect(mocks.rm).toHaveBeenNthCalledWith(1, WORK_DIR, {
+    expect(mocks.mkdtemp).toHaveBeenCalledExactlyOnceWith(
+      "/tmp/vigi-downloader-",
+    );
+    expect(mocks.rm).toHaveBeenLastCalledWith(WORK_DIR, {
       recursive: true,
       force: true,
     });
-    expect(mocks.rm).toHaveBeenLastCalledWith(WORK_DIR, {
+  });
+
+  it("clears the temporary directory even when a run fails", async () => {
+    mocks.downloadMedia.mockRejectedValue(new Error("socket hang up"));
+    const check = await startService();
+
+    await expect(check()).rejects.toThrow(
+      "2 recording(s) could not be downloaded",
+    );
+
+    expect(mocks.rm).toHaveBeenCalledWith(WORK_DIR, {
       recursive: true,
       force: true,
     });
@@ -370,6 +387,7 @@ describe("downloader service", () => {
 
     expect(mocks.downloadMedia).not.toHaveBeenCalled();
     expect(mocks.markDownloadStarted).not.toHaveBeenCalled();
+    expect(mocks.mkdtemp).not.toHaveBeenCalled();
     expect(mocks.downloadsStarted).not.toHaveBeenCalled();
     expect(mocks.downloadsFinished).not.toHaveBeenCalled();
   });
