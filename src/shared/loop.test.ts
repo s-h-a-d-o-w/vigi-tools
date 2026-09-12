@@ -41,6 +41,19 @@ describe(runForever, () => {
     expect(check).toHaveBeenCalledTimes(2);
   });
 
+  it("holds the first run back by the start delay", async () => {
+    vi.useFakeTimers();
+    const check = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+
+    void runForever(35_000, check, 10_000);
+    await vi.advanceTimersByTimeAsync(9_999);
+
+    expect(check).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(2);
+    expect(check).toHaveBeenCalledOnce();
+  });
+
   it("stops instead of retrying a failed attempt", async () => {
     vi.useFakeTimers();
     const check = vi

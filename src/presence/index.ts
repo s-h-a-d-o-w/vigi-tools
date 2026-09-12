@@ -11,6 +11,10 @@ import { loadConfig } from "./config.ts";
 import { REQUIRED_ABSENT_SCANS } from "./env-schema.ts";
 import { createBatteryWarner } from "./notify.ts";
 
+// Battery readings come from the cached device info, which only holds the
+// manufacturer data once a scan has seen the beacon.
+const BATTERY_CHECK_START_DELAY_MS = 30_000;
+
 const config = loadConfig();
 const controlApi: ControlApiOptions = {
   host: config.host,
@@ -62,5 +66,9 @@ async function checkBatteries(): Promise<void> {
 // any number of presence scans.
 await Promise.all([
   runForever(0, check),
-  runForever(config.batteryCheckInterval, checkBatteries),
+  runForever(
+    config.batteryCheckInterval,
+    checkBatteries,
+    BATTERY_CHECK_START_DELAY_MS,
+  ),
 ]);
