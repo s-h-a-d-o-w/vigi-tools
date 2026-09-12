@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   install: vi.fn<(tool: string) => void>(),
   uninstall: vi.fn<(tool: string) => void>(),
   loadEnvFile: vi.fn<(tool: string) => void>(),
+  requireBinaries: vi.fn<(binaries: readonly string[]) => void>(),
 }));
 
 vi.mock(import("./configure.ts"), () => ({ configure: mocks.configure }));
@@ -17,6 +18,9 @@ vi.mock(import("./service.ts"), () => ({
 vi.mock(import("./env-file.ts"), () => ({
   loadEnvFile: mocks.loadEnvFile,
   envFilePath: vi.fn<(tool: string) => string>(),
+}));
+vi.mock(import("../shared/binaries.ts"), () => ({
+  requireBinaries: mocks.requireBinaries,
 }));
 
 const ORIGINAL_ARGV = process.argv;
@@ -82,8 +86,23 @@ describe("cli", () => {
     // follows fails here - by then the environment has been loaded.
     await run("downloader");
 
+    expect(mocks.requireBinaries).toHaveBeenCalledWith(["ffmpeg"]);
     expect(mocks.loadEnvFile).toHaveBeenCalledWith("downloader");
     expect(mocks.configure).not.toHaveBeenCalled();
+  });
+
+  it("refuses to start a tool whose binaries are missing", async () => {
+    mocks.requireBinaries.mockImplementation(() => {
+      throw new Error("Missing required executable(s): bluetoothctl");
+    });
+
+    await run("presence");
+
+    expect(vi.mocked(console.error).mock.lastCall?.[0]).toContain(
+      "Missing required executable(s): bluetoothctl",
+    );
+    expect(mocks.loadEnvFile).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
   });
 
   it("hands configure, install and uninstall their tool", async () => {

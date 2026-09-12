@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+import { requireBinaries } from "../shared/binaries.ts";
+
 import { configure } from "./configure.ts";
 import { loadEnvFile } from "./env-file.ts";
 import { install, uninstall } from "./service.ts";
@@ -46,6 +48,7 @@ Options:
 }
 
 async function runTool(tool: ToolName): Promise<void> {
+  requireBinaries(tools[tool].requiredBinaries);
   loadEnvFile(tool);
 
   await tools[tool].run();

@@ -6,17 +6,24 @@ export const tools = {
   downloader: {
     description: "syncs recordings from the camera into a local directory",
     envSchema: downloaderEnvSchema,
+    requiredBinaries: ["ffmpeg"],
     run: () => import("../downloader/index.ts"),
   },
   presence: {
     description:
       "turns motion detection off while a known BLE device is nearby",
     envSchema: presenceEnvSchema,
+    requiredBinaries: ["bluetoothctl"],
     run: () => import("../presence/index.ts"),
   },
 } satisfies Record<
   string,
-  { description: string; envSchema: EnvField[]; run: () => Promise<unknown> }
+  {
+    description: string;
+    envSchema: EnvField[];
+    requiredBinaries: string[];
+    run: () => Promise<unknown>;
+  }
 >;
 
 export type ToolName = keyof typeof tools;
