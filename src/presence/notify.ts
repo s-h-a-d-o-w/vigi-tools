@@ -58,6 +58,7 @@ function createSesWarner(config: SesConfig): BatteryWarner {
       for (const address of addresses) {
         try {
           await check(address);
+          log(`  battery check for ${address} passed.`);
         } catch (error) {
           logError(
             `  battery check for ${address} failed: ${error instanceof Error ? error.message : String(error)}`,

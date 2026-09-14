@@ -68,6 +68,12 @@ describe(createBatteryWarner, () => {
     expect(mocks.isBatteryLow).toHaveBeenCalledTimes(2);
     expect(mocks.isBatteryLow).toHaveBeenCalledWith(PHONE);
     expect(mocks.isBatteryLow).toHaveBeenCalledWith(BEACON);
+    expect(mocks.log).toHaveBeenCalledWith(
+      `  battery check for ${PHONE} passed.`,
+    );
+    expect(mocks.log).toHaveBeenCalledWith(
+      `  battery check for ${BEACON} passed.`,
+    );
   });
 
   it("stays quiet while a beacon does not flag its battery", async () => {
@@ -75,7 +81,7 @@ describe(createBatteryWarner, () => {
 
     await createBatteryWarner(CONFIG).check([PHONE]);
 
-    expect(mocks.log).not.toHaveBeenCalled();
+    expect(mocks.log).not.toHaveBeenCalledWith(`  ${PHONE} battery is low!`);
     expect(mocks.send).not.toHaveBeenCalled();
   });
 
