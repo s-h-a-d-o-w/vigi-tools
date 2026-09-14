@@ -164,4 +164,20 @@ describe("presence service", () => {
 
     expect(mocks.setMotionDetectionSwitch).toHaveBeenCalledTimes(2);
   });
+
+  it("skips a round without touching the camera when a scan fails", async () => {
+    const check = await startService();
+
+    mocks.anyDevicePresent.mockRejectedValueOnce(
+      new Error("Command failed: bluetoothctl --timeout 6 scan le"),
+    );
+
+    await expect(check()).resolves.toBeUndefined();
+
+    expect(mocks.logError).toHaveBeenCalledWith(
+      "  scan failed: Command failed: bluetoothctl --timeout 6 scan le",
+    );
+    expect(mocks.authenticate).not.toHaveBeenCalled();
+    expect(mocks.setMotionDetectionSwitch).not.toHaveBeenCalled();
+  });
 });

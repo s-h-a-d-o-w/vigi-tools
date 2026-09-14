@@ -1,4 +1,4 @@
-import { log } from "../shared/log.ts";
+import { log, logError } from "../shared/log.ts";
 import { runForever } from "../shared/loop.ts";
 import {
   authenticate,
@@ -29,10 +29,20 @@ let appliedState: boolean | undefined;
 let absentScans = 0;
 
 async function check(): Promise<void> {
-  const presentDevice = await anyDevicePresent(
-    config.devices,
-    config.checkIntervalSeconds,
-  );
+  let presentDevice: string | undefined;
+
+  // A scan can fail transiently when the adapter is busy or BlueZ hiccups.
+  try {
+    presentDevice = await anyDevicePresent(
+      config.devices,
+      config.checkIntervalSeconds,
+    );
+  } catch (error) {
+    logError(
+      `  scan failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return;
+  }
 
   absentScans = presentDevice === undefined ? absentScans + 1 : 0;
   if (absentScans > 0 && absentScans < REQUIRED_ABSENT_SCANS) {
@@ -44,16 +54,22 @@ async function check(): Promise<void> {
     presentDevice === undefined ? `nobody home` : `${presentDevice} is nearby`,
   );
 
-  const shouldDetect = absentScans >= REQUIRED_ABSENT_SCANS;
-  if (shouldDetect !== appliedState) {
-    const stok = await authenticate(
-      controlApi,
-      config.username,
-      config.password,
+  try {
+    const shouldDetect = absentScans >= REQUIRED_ABSENT_SCANS;
+    if (shouldDetect !== appliedState) {
+      const stok = await authenticate(
+        controlApi,
+        config.username,
+        config.password,
+      );
+      await setMotionDetectionSwitch(controlApi, stok, shouldDetect);
+      appliedState = shouldDetect;
+      log(`  motion detection turned ${appliedState ? "on" : "off"}`);
+    }
+  } catch (error) {
+    logError(
+      `  motion detection update failed: ${error instanceof Error ? error.message : String(error)}`,
     );
-    await setMotionDetectionSwitch(controlApi, stok, shouldDetect);
-    appliedState = shouldDetect;
-    log(`  motion detection turned ${appliedState ? "on" : "off"}`);
   }
 }
 
