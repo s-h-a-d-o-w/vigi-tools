@@ -1,3 +1,5 @@
+[![npm version](https://img.shields.io/npm/v/vigi-tools)](https://www.npmjs.com/package/vigi-tools)
+
 # vigi-tools
 
 CLI tools for a TP-Link VIGI camera, using its "Open API" (you have to enable this in the camera settings).
