@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   uninstall: vi.fn<(tool: string) => void>(),
   loadEnvFile: vi.fn<(tool: string) => void>(),
   requireBinaries: vi.fn<(binaries: readonly string[]) => void>(),
+  installCrashReporter: vi.fn<(tool: string) => void>(),
+  reportFatalError: vi.fn<(error: unknown) => Promise<void>>(),
 }));
 
 vi.mock(import("./configure.ts"), () => ({ configure: mocks.configure }));
@@ -21,6 +23,10 @@ vi.mock(import("./env-file.ts"), () => ({
 }));
 vi.mock(import("../shared/binaries.ts"), () => ({
   requireBinaries: mocks.requireBinaries,
+}));
+vi.mock(import("../shared/crash-report.ts"), () => ({
+  installCrashReporter: mocks.installCrashReporter,
+  reportFatalError: mocks.reportFatalError,
 }));
 
 const ORIGINAL_ARGV = process.argv;
@@ -47,6 +53,7 @@ describe("cli", () => {
     vi.spyOn(console, "error").mockReturnValue(undefined);
 
     mocks.configure.mockResolvedValue(undefined);
+    mocks.reportFatalError.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -88,6 +95,7 @@ describe("cli", () => {
 
     expect(mocks.requireBinaries).toHaveBeenCalledWith(["ffmpeg"]);
     expect(mocks.loadEnvFile).toHaveBeenCalledWith("downloader");
+    expect(mocks.installCrashReporter).toHaveBeenCalledWith("downloader");
     expect(mocks.configure).not.toHaveBeenCalled();
   });
 
@@ -102,6 +110,7 @@ describe("cli", () => {
       "Missing required executable(s): bluetoothctl",
     );
     expect(mocks.loadEnvFile).not.toHaveBeenCalled();
+    expect(mocks.reportFatalError).toHaveBeenCalledWith(expect.any(Error));
     expect(process.exitCode).toBe(1);
   });
 

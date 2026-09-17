@@ -33,7 +33,7 @@ vigi-tools <tool> install
 A service runs as the user who invoked it and starts on boot. It is not
 restarted automatically: An error stops it so that repeated failing API calls cannot get the account locked out
 
-Logs go to the journal:
+Logs go to the journal (and crashes are reported via SES if configured):
 
 ```bash
 journalctl -u vigi-<tool> -f

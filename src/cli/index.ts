@@ -5,6 +5,10 @@ import path from "node:path";
 import process from "node:process";
 
 import { requireBinaries } from "../shared/binaries.ts";
+import {
+  installCrashReporter,
+  reportFatalError,
+} from "../shared/crash-report.ts";
 
 import { configure } from "./configure.ts";
 import { loadEnvFile } from "./env-file.ts";
@@ -50,6 +54,7 @@ Options:
 async function runTool(tool: ToolName): Promise<void> {
   requireBinaries(tools[tool].requiredBinaries);
   loadEnvFile(tool);
+  installCrashReporter(tool);
 
   await tools[tool].run();
 }
@@ -91,5 +96,6 @@ try {
   await main();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
+  await reportFatalError(error);
   process.exitCode = 1;
 }
