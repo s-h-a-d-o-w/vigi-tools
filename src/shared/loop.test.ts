@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runForever } from "./loop.ts";
+import { TransientError } from "./transient-error.ts";
 
 const mocks = vi.hoisted(() => ({
   logError: vi.fn<(message: string) => void>(),
@@ -67,5 +68,21 @@ describe(runForever, () => {
 
     await vi.advanceTimersByTimeAsync(100_000);
     expect(check).toHaveBeenCalledOnce();
+  });
+
+  it("keeps going after a transient failure", async () => {
+    vi.useFakeTimers();
+    const check = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new TransientError("socket hang up"))
+      .mockResolvedValue(undefined);
+
+    void runForever(35_000, check);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(mocks.logError).toHaveBeenCalledWith("Mock failed: socket hang up");
+
+    await vi.advanceTimersByTimeAsync(35_000);
+    expect(check).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,5 +1,6 @@
 import { Agent, request } from "node:https";
 
+import { TransientError } from "../transient-error.ts";
 import type { EventType, MediaEntry } from "../types.ts";
 import { digestHash } from "./digest.ts";
 
@@ -129,9 +130,13 @@ function post(
         new Error(`no response within ${REQUEST_TIMEOUT_MS} ms`),
       );
     });
+    // Nothing reaching this handler comes from the device rejecting us; the
+    // connection itself failed, so the caller is free to try again later.
     clientRequest.on("error", (error: Error) => {
       reject(
-        new Error(`POST ${path} failed: ${error.message}`, { cause: error }),
+        new TransientError(`POST ${path} failed: ${error.message}`, {
+          cause: error,
+        }),
       );
     });
     clientRequest.end(body);
