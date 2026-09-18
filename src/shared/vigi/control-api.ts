@@ -143,50 +143,177 @@ function post(
   });
 }
 
-/** Performs the two-step `doAuth` handshake and returns the session token (`stok`). */
-export async function authenticate(
+type Challenge = {
+  algorithm: string;
+  method: string;
+  nonce: string;
+  realm: string;
+  uri: string;
+};
+
+function readChallenge(result: Record<string, unknown>): Challenge | undefined {
+  const fields = asRecord(result["authenticate"]);
+  if (fields === undefined) {
+    return undefined;
+  }
+
+  return {
+    algorithm: asText(fields["algorithm"]) ?? "MD5",
+    method: asText(fields["method"]) ?? "",
+    nonce: asText(fields["nonce"]) ?? "",
+    realm: asText(fields["realm"]) ?? "",
+    uri: asText(fields["uri"]) ?? "",
+  };
+}
+
+function answerChallenge(
+  challenge: Challenge,
+  username: string,
+  password: string,
+): { nonce: string; response: string } {
+  const { algorithm, method, nonce, realm, uri } = challenge;
+
+  const a1 = digestHash(algorithm, `${username}:${realm}:${password}`);
+  const a2 = digestHash(algorithm, `${method}:${uri}`);
+
+  return { nonce, response: digestHash(algorithm, `${a1}:${nonce}:${a2}`) };
+}
+
+// The device reports failed attempts as `time` out of `max_time` and locks the
+// account once they meet (errCode -10022), so we always stop one short.
+function attemptsLeft(result: Record<string, unknown>): number {
+  const used = Number(result["time"] ?? Number.NaN);
+  const max = Number(result["max_time"] ?? Number.NaN);
+
+  return Number.isFinite(used) && Number.isFinite(max)
+    ? max - used
+    : Number.POSITIVE_INFINITY;
+}
+
+const MAX_HANDSHAKE_ATTEMPTS = 2;
+
+async function login(
   options: ControlApiOptions,
   username: string,
   password: string,
 ): Promise<string> {
-  const challenge = await post(options, "/", {
+  let result = await post(options, "/", {
     method: "doAuth",
     // The device rejects the request unless `params` is present and JSON null.
     // oxlint-disable-next-line unicorn/no-null
     params: null,
   });
-  const fields = asRecord(challenge["authenticate"]);
 
-  if (fields === undefined) {
-    throw new Error(
-      `doAuth did not return a challenge: ${describeErrorCode(challenge["errCode"])} (${JSON.stringify(challenge)})`,
-    );
+  for (let attempt = 1; ; attempt += 1) {
+    const challenge = readChallenge(result);
+    if (challenge === undefined) {
+      throw new Error(
+        `doAuth did not return a challenge: ${describeErrorCode(result["errCode"])} (${JSON.stringify(result)})`,
+      );
+    }
+
+    result = await post(options, "/", {
+      method: "doAuth",
+      params: answerChallenge(challenge, username, password),
+    });
+
+    const { stok } = result;
+    if (typeof stok === "string" && stok !== "") {
+      return stok;
+    }
+
+    // A rejection comes back shaped exactly like the opening challenge
+    // (VIGI-SPEC.md, 2.2.1), carrying a new nonce. The device only keeps one
+    // pending nonce, so this is what a wrong password and someone else
+    // starting a handshake between our two requests both look like. Answering
+    // the fresh nonce is the only way to tell them apart, but each try counts
+    // towards the lockout, so we give up while an attempt is still spare.
+    if (
+      attempt >= MAX_HANDSHAKE_ATTEMPTS ||
+      readChallenge(result) === undefined ||
+      attemptsLeft(result) <= 1
+    ) {
+      throw new Error(
+        `doAuth failed: ${describeErrorCode(result["errCode"])} (${JSON.stringify(result)})`,
+      );
+    }
+  }
+}
+
+// A token lives for half an hour (VIGI-SPEC.md, 4.1.1). Re-running the
+// handshake on every check instead would occupy a fresh session slot each time
+// and widen the window for the nonce race above, so tokens are kept and
+// refreshed early enough that no call starts with one about to lapse.
+const TOKEN_TTL_MS = 25 * 60_000;
+
+type Session = { expiresAt: number; stok: string };
+
+const sessions = new Map<string, Session>();
+const handshakes = new Map<string, Promise<string>>();
+
+function sessionKey(options: ControlApiOptions): string {
+  return `${options.host}:${options.port}`;
+}
+
+function forgetSession(options: ControlApiOptions): void {
+  sessions.delete(sessionKey(options));
+}
+
+/** Returns a session token (`stok`), reusing the current one while it lasts. */
+export function authenticate(
+  options: ControlApiOptions,
+  username: string,
+  password: string,
+): Promise<string> {
+  const key = sessionKey(options);
+
+  const session = sessions.get(key);
+  if (session !== undefined && session.expiresAt > Date.now()) {
+    return Promise.resolve(session.stok);
   }
 
-  const algorithm = asText(fields["algorithm"]) ?? "MD5";
-  const realm = asText(fields["realm"]) ?? "";
-  const nonce = asText(fields["nonce"]) ?? "";
-
-  const a1 = digestHash(algorithm, `${username}:${realm}:${password}`);
-  const a2 = digestHash(
-    algorithm,
-    `${asText(fields["method"]) ?? ""}:${asText(fields["uri"]) ?? ""}`,
-  );
-  const response = digestHash(algorithm, `${a1}:${nonce}:${a2}`);
-
-  const result = await post(options, "/", {
-    method: "doAuth",
-    params: { nonce, response },
-  });
-  const { stok } = result;
-
-  if (typeof stok !== "string" || stok === "") {
-    throw new Error(
-      `doAuth failed: ${describeErrorCode(result["errCode"])} (${JSON.stringify(result)})`,
-    );
+  // Two overlapping callers would otherwise invalidate each other's nonce.
+  const pending = handshakes.get(key);
+  if (pending !== undefined) {
+    return pending;
   }
 
-  return stok;
+  const handshake = login(options, username, password)
+    .then((stok) => {
+      sessions.set(key, { expiresAt: Date.now() + TOKEN_TTL_MS, stok });
+      return stok;
+    })
+    .finally(() => {
+      handshakes.delete(key);
+    });
+
+  handshakes.set(key, handshake);
+
+  return handshake;
+}
+
+const UNAUTHORIZED = -10_002;
+
+function assertOk(
+  options: ControlApiOptions,
+  result: Record<string, unknown>,
+  method: string,
+): void {
+  const errorCode = Number(result["errCode"] ?? 0);
+  if (errorCode === 0) {
+    return;
+  }
+
+  const message = `${method} failed: ${describeErrorCode(errorCode)} (${JSON.stringify(result)})`;
+
+  // The device dropped the token ahead of its advertised lifetime. Nothing was
+  // rejected about our credentials, so the next run may simply log in again.
+  if (errorCode === UNAUTHORIZED) {
+    forgetSession(options);
+    throw new TransientError(message);
+  }
+
+  throw new Error(message);
 }
 
 /** Turns motion detection on or off, preserving the device's other motion settings. */
@@ -201,12 +328,7 @@ export async function setMotionDetectionSwitch(
     method: "getMotionDetectionSwitch",
   });
 
-  const currentErrorCode = Number(current["errCode"] ?? 0);
-  if (currentErrorCode !== 0) {
-    throw new Error(
-      `getMotionDetectionSwitch failed: ${describeErrorCode(currentErrorCode)} (${JSON.stringify(current)})`,
-    );
-  }
+  assertOk(options, current, "getMotionDetectionSwitch");
 
   // The device rejects the write with errCode -10009 unless `sensitivity` is
   // sent alongside `enabled`, so we just echo back everything it just reported.
@@ -220,12 +342,7 @@ export async function setMotionDetectionSwitch(
     params: { ...settings, enabled: enabled ? "on" : "off" },
   });
 
-  const errorCode = Number(result["errCode"] ?? 0);
-  if (errorCode !== 0) {
-    throw new Error(
-      `setMotionDetectionSwitch failed: ${describeErrorCode(errorCode)} (${JSON.stringify(result)})`,
-    );
-  }
+  assertOk(options, result, "setMotionDetectionSwitch");
 }
 
 function toMediaEntries(media: Record<string, unknown>): MediaEntry[] {
@@ -270,12 +387,7 @@ export async function getMediaList(
     });
 
     // spec is wrong, it's actually `errCode` not `error_code`
-    const errorCode = Number(result["errCode"] ?? 0);
-    if (errorCode !== 0) {
-      throw new Error(
-        `getMediaList failed: ${describeErrorCode(errorCode)} (${JSON.stringify(result)})`,
-      );
-    }
+    assertOk(options, result, "getMediaList");
 
     // spec is wrong, it's actually `result` not `media`
     const media = asRecord(result["result"]);
